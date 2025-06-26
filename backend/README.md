@@ -14,6 +14,27 @@ This folder contains the Flask RESTful API backend for the HabitTrackerApp.
     - If missing or out of sync, run `pip install -r requirements.txt`
 - **Configuration:** No extra config file; uses .json and OS path logic
 
+---
+
+## Manual Endpoint Test
+
+To manually test the `/api/register` endpoint via curl, use this command from a shell with the backend running:
+
+```bash
+curl -i -X POST http://localhost:5000/api/register \
+  -H "Content-Type: application/json" \
+  -d '{"name": "CurlTestUser", "email": "curltestuser123@example.com", "password": "CurlPass123"}'
+```
+
+A correct response will have `Content-Type: application/json` and a response body like:
+
+```json
+{ "success": true, "user": { ...fields... } }
+```
+or, on error, an error-format JSON object. You should NEVER receive an HTML/500 error for clean input.
+
+---
+
 ## Setup
 
 - Install dependencies in a virtualenv:
