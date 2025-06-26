@@ -89,6 +89,12 @@ function Dashboard() {
           const result = await resp.json();
           if (!result.success) throw new Error(result.message || "Track error");
           setJustTracked((prev) => ({ ...prev, [habitId]: true }));
+          // After marking as done, refetch habits to refresh UI
+          fetch(`/api/habits?user_id=${user.id}`)
+            .then((resp) => resp.json())
+            .then((habitData) => {
+              if (habitData && habitData.success) setHabits(habitData.habits || []);
+            });
         })
         .catch((err) => {
           setErrMsg("Failed to mark as done: " + (err.message || ""));

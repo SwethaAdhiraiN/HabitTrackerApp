@@ -64,6 +64,11 @@ function Register() {
             try {
               const result = await resp.json();
               if (result && result.success) {
+                // Store user in session/localStorage as with login
+                if (result.user) {
+                  window.sessionStorage.setItem("habit_user", JSON.stringify(result.user));
+                  window.localStorage.setItem("habit_user", JSON.stringify(result.user));
+                }
                 setTimeout(() => {
                   navigate("/dashboard");
                 }, 650);
