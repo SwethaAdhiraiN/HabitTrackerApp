@@ -98,64 +98,33 @@ function Dashboard() {
       ignore = true;
     };
   }, []);
-  // At this point, all hooks are above. Now use conditional logic for rendering.
-  if (loading) {
+  // Store loading state
+  const isLoading = loading;
+  const isError = (!loading && !!error);
+  const isNoUser = (!loading && !error && !user);
+
+  // Early return states but not before hooks
+  if (isLoading) {
     return (
       <div className={styles.dashboardBg} style={{ display: "flex", height: "100vh", alignItems: "center", justifyContent: "center" }}>
         <div style={{ color: "var(--ht-primary)", fontWeight: 700, fontSize: "1.3rem" }}>Loading your dashboard...</div>
       </div>
     );
   }
-  if (error) {
+  if (isError) {
     return (
       <div className={styles.dashboardBg} style={{ display: "flex", height: "100vh", alignItems: "center", justifyContent: "center" }}>
         <div style={{ color: "var(--ht-error)", fontWeight: 700, fontSize: "1.15rem" }}>{error}</div>
       </div>
     );
   }
-  if (!user) {
+  if (isNoUser) {
     return (
       <div className={styles.dashboardBg} style={{ display: "flex", height: "100vh", alignItems: "center", justifyContent: "center" }}>
         <div style={{ color: "var(--ht-error)", fontWeight: 700, fontSize: "1.15rem" }}>No user data found.</div>
       </div>
     );
   }
-
-  // Today's date, for greeting and calendar computations
-  const todayObj = useMemo(() => new Date(), []);
-  const weekDays = useMemo(() => {
-    // Construct this week: Sun..Sat, highlight today
-    const days = [];
-    const todayIdx = todayObj.getDay();
-    for (let i = 0; i < 7; ++i) {
-      let d = new Date(todayObj);
-      d.setDate(todayObj.getDate() - todayIdx + i);
-      days.push({
-        label: d.toLocaleString("en-US", { weekday: "short" }),
-        date: d.getDate(),
-        isToday: i === todayIdx,
-      });
-    }
-    return days;
-  }, [todayObj]);
-
-  // Sidebar snapshot: total habits, completed today, longest streak
-  const sidebarMetrics = useMemo(() => {
-    let totalHabits = habits ? habits.length : 0;
-    let completedToday = 0;
-    let longestStreak = 0;
-    if (habits && progress) {
-      // completedToday: count of habits checked true in progress.habit_checkmarks
-      completedToday = Object.values(progress.habit_checkmarks || {}).filter(Boolean).length;
-      // Longest streak: max habit.streak from all
-      longestStreak = habits.reduce((mx, h) => Math.max(mx, h.streak || 0), 0);
-    }
-    return [
-      { label: "Total Habits", value: totalHabits },
-      { label: "Completed Today", value: completedToday },
-      { label: "Longest Streak", value: longestStreak },
-    ];
-  }, [habits, progress]);
 
   // Main habits for "Your Habits This Week" -- for the week tracker
   function HabitsList() {
