@@ -30,5 +30,13 @@
     "password": "debugpass123",
     "avatar": "https://ui-avatars.com/api/?name=TestDebug",
     "join_date": "2025-06-26"
+  },
+  {
+    "id": 5,
+    "name": "swetha",
+    "email": "swetha@gmail.com",
+    "password": "swetha",
+    "avatar": "https://ui-avatars.com/api/?name=swetha",
+    "join_date": "2025-06-26"
   }
 ]
