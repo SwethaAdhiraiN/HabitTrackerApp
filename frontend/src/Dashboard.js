@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import styles from "./styles/Dashboard.module.css";
 import UserHeader from "./UserHeader";
 import ProgressSnapshotWidget from "./ProgressSnapshotWidget";
+import MiniCalendarWidget from "./MiniCalendarWidget";
 
 /**
  * Fetches and returns the current and longest streak info for a habit.
@@ -509,28 +510,7 @@ function Dashboard() {
             </div>
           </div>
           {/* Mini Calendar */}
-          <div className={styles.calendarWidget} aria-label="Mini Calendar">
-            <div className={styles.calendarHeader}>Monthly Calendar</div>
-            <div className={styles.calendarDaysRow}>
-              {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
-                <div key={d} className={styles.calendarDay}>
-                  <div className={styles.dayLabel}>{d}</div>
-                  <div
-                    className={
-                      new Date().getDay() === i
-                        ? styles.dayCircle + " " + styles.calendarToday
-                        : styles.dayCircle
-                    }
-                  >
-                    {(() => {
-                      const today = new Date();
-                      return today.getDay() === i ? today.getDate() : "–";
-                    })()}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <MiniCalendarWidget userId={user?.id} />
         </aside>
       </main>
     </div>
