@@ -3,13 +3,134 @@ import styles from "./styles/Dashboard.module.css";
 import UserHeader from "./UserHeader";
 
 /**
+ * Fetches and returns the current and longest streak info for a habit.
+ * @param {number} habitId
+ * @returns {object} { streak, longest, loading, error }
+ */
+function useHabitProgress(habitId, enabled) {
+  const [progress, setProgress] = useState({ streak: 0, longest: 0 });
+  const [loading, setLoading] = useState(!!enabled);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!habitId || !enabled) return;
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    fetch(`/api/habits/${habitId}/progress`)
+      .then(async (resp) => {
+        if (!resp.ok) throw new Error("Could not fetch habit progress");
+        const data = await resp.json();
+        if (data && data.success) {
+          if (!cancelled) setProgress({
+            streak: data.current_streak || data.streak || 0,
+            longest: data.longest_streak || 0
+          });
+        } else {
+          if (!cancelled) setError("No progress data");
+          setProgress({ streak: 0, longest: 0 });
+        }
+      })
+      .catch((e) => {
+        if (!cancelled) setError("Error loading progress");
+        setProgress({ streak: 0, longest: 0 });
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [habitId, enabled]);
+
+  return { ...progress, loading, error };
+}
+
+// Flame SVG for streak, kept modular for possible enhancement
+function FlameIcon({ color = "#F8A11E", size = 21, style = {} }) {
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", justifyContent: "center",
+      width: size, height: size, marginRight: 2, ...style
+    }}>
+      <svg width={size} height={size} viewBox="0 0 18 18" aria-hidden="true">
+        <path
+          d="M9.1 3.1c.6-.7 1-1.5 1.1-2.1 1.1.9 3.1 3.1 3.8 6.2.2.9 1.5 1 2.1 1.7 1 1.2.6 4-2.2 5.7C11.2 16.4 8.2 16.7 6 15.9 2.2 14.7 0 10.9 0 8.8c0-2.1 1-2.8 2-4.2.7-1 2.5-1.6 3.2-1.6C6 3 7.4 4.3 9.1 3.1z"
+          fill={color}
+        />
+      </svg>
+    </span>
+  );
+}
+
+// Modular, per-habit card renderer with streak/progress info
+function HabitCard({ habit, streak, longest, streakLoading, streakError, tracker, onMarkDone, disabled = false, justTracked }) {
+  // If streak info is loading, optional shimmer/placeholder; else normal
+  return (
+    <div className={styles.habitCard}>
+      <div className={styles.habitCardTopRow}>
+        {/* Icon */}
+        {getIconForHabit(habit.icon)}
+        {/* Name */}
+        <span className={styles.habitName}>
+          {habit.name || "—"}
+        </span>
+        {/* Streak visual */}
+        <span style={{ position: "relative", display: "flex", alignItems: "center", marginLeft: 8 }}>
+          <FlameIcon color="#F8A11E" size={18} />
+          {streakLoading ? (
+            <span style={{
+              minWidth: 17,
+              height: 16,
+              background: "#FFF2CE",
+              borderRadius: 8,
+              display: "inline-block",
+              marginLeft: 1,
+              marginRight: 2,
+              opacity: 0.65,
+              fontSize: "0.92rem",
+              fontWeight: 600
+            }} />
+          ) : streakError ? (
+            <span title="Could not load streak" style={{ color: "#F87A77", fontWeight: 600, fontSize: "0.97em", marginLeft: 2 }}>–</span>
+          ) : (
+            <span title="Current streak" style={{ color: "#F8A11E", marginLeft: 2, fontWeight: 700, fontSize: "1.03em" }}>{streak}</span>
+          )}
+        </span>
+        {/* Longest streak in small subtext */}
+        {(!streakLoading && streak >= 0 && longest > 0) && (
+          <span title="Longest streak" style={{
+            color: "#CF980E",
+            fontWeight: 500,
+            fontSize: "0.89em",
+            marginLeft: 6,
+            opacity: 0.72
+          }}>🔥<span style={{ marginLeft: 2 }}>{longest}</span></span>
+        )}
+      </div>
+      {/* 7 day checkmark tracker + optional annotation */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        {tracker}
+      </div>
+      {/* Mark as Done Today Button */}
+      <MarkDoneButton
+        habit={habit}
+        disabled={disabled}
+        onClick={onMarkDone}
+        justTracked={justTracked}
+      />
+    </div>
+  );
+}
+
+/**
  * PUBLIC_INTERFACE
  * Dashboard page container for HabitTrackerApp.
  *
  * - Fetches and displays all habits for the current user.
- * - Lists them in a horizontal scrollable card UI ("Your Habits This Week").
- * - Shows a 7-day progress tracker for each habit, check/ice icon for completion.
- * - Provides a "Mark as Done Today" button, updating habit via POST to /api/habits/:id/track.
+ * - For each habit, fetches streak/progress info from `/api/habits/:id/progress`.
+ * - Annotates each habit's tracker visually with current and longest streak (flame icon, numbers, etc).
+ * - Handles loading and error states at both list and per-habit streak level.
+ * - Code is modular: tracker, streak icon, card, and fetch logic are split for further enhancements.
+ * - Horizontal habit cards scroll, 7-day check icons, mark-done button per habit.
  * - Uses pastel palette and dashboard CSS module.
  */
 function Dashboard() {
@@ -245,8 +366,8 @@ function Dashboard() {
     );
   }
 
-  // Button: mark as done today
-  function MarkDoneButton({ habit, disabled, onClick }) {
+  // Modularized Mark Done Button now supports justTracked status for UI clarity
+  function MarkDoneButton({ habit, disabled, onClick, justTracked }) {
     const todayIdx = new Date().getDay();
     const isDoneToday =
       Array.isArray(habit.days) &&
@@ -286,24 +407,7 @@ function Dashboard() {
     );
   }
 
-  // Streak UI: flame/star with number
-  function StreakIndicator({ count = 0 }) {
-    if (!count || count < 1) return null;
-    return (
-      <span className={styles.streakIcon} title="Current streak">
-        <svg width="19" height="19" viewBox="0 0 16 16">
-          <path
-            d="M8 1l2 4 5 .7-3.7 3.7.9 5-4.2-2.4L4 14l1-5L1.2 5.7 6 5l2-4z"
-            fill="#F8A11E"
-            stroke="#E19B07"
-            strokeWidth="0.8"
-          />
-        </svg>
-        <span className={styles.streakCount}>{count}</span>
-      </span>
-    );
-  }
-
+  // --- Main render ---
   return (
     <div className={styles.dashboardBg}>
       {/* User Header Section (handles user info, welcome, date, logout) */}
@@ -364,28 +468,25 @@ function Dashboard() {
                 No habits to display. Add a habit to get started!
               </div>
             ) : (
-              habits.map((habit) => (
-                <div className={styles.habitCard} key={habit.id}>
-                  <div className={styles.habitCardTopRow}>
-                    {/* Icon */}
-                    {getIconForHabit(habit.icon)}
-                    {/* Name */}
-                    <span className={styles.habitName}>
-                      {habit.name || "—"}
-                    </span>
-                    {/* Streak */}
-                    <StreakIndicator count={habit.streak} />
-                  </div>
-                  {/* 7 day checkmark tracker */}
-                  {renderTracker(habit.days)}
-                  {/* Mark as Done Today Button */}
-                  <MarkDoneButton
+              habits.map(habit => {
+                // for each habit load streak/progress info
+                const { streak, longest, loading: streakLoading, error: streakError }
+                  = useHabitProgress(habit.id, true);
+                return (
+                  <HabitCard
+                    key={habit.id}
                     habit={habit}
+                    streak={streak}
+                    longest={longest}
+                    streakLoading={streakLoading}
+                    streakError={streakError}
+                    tracker={renderTracker(habit.days)}
+                    onMarkDone={markDoneToday}
                     disabled={!!trackLoading[habit.id]}
-                    onClick={markDoneToday}
+                    justTracked={justTracked}
                   />
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </section>
