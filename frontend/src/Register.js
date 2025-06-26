@@ -36,7 +36,8 @@ function Register() {
     setTouched({ email: true, password: true });
     if (validateEmail(email) && validatePassword(password)) {
       // Make API call to Flask backend /api/register (POST)
-      fetch("/api/register", {
+      // Use the full backend URL to avoid fetch misrouting in dev/prod environments
+      fetch("http://localhost:5000/api/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -55,7 +56,13 @@ function Register() {
               navigate("/dashboard");
             }, 650); // short delay for visual feedback
           } else {
-            const result = await resp.json();
+            // Try to parse JSON; if not, fallback to generic message
+            let result;
+            try {
+              result = await resp.json();
+            } catch {
+              result = null;
+            }
             alert((result && result.message) || "Registration failed");
             setSubmitted(false);
           }
