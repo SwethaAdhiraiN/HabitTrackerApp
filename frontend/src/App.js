@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom";
 import Register from "./Register";
 import Login from "./Login";
@@ -12,7 +12,6 @@ import "./styles/theme.css";
  * - Prominent accent "Register" button (top-right).
  * - All color, type, radius, and spacing per extracted style guidance.
  */
-import React, { useEffect, useState, useMemo } from "react";
 const habitIcons = {
   water_drop: (
     <span style={{
