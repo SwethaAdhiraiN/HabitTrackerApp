@@ -35,8 +35,32 @@ function Register() {
     e.preventDefault();
     setTouched({ email: true, password: true });
     if (validateEmail(email) && validatePassword(password)) {
-      setSubmitted(true);
-      // Backend API call would go here
+      // Make API call to Flask backend /api/register (POST)
+      fetch("/api/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          name: email.split("@")[0], // Use prefix as name fallback
+          email: email.trim(),
+          password: password
+        })
+      })
+        .then(async (resp) => {
+          if (resp.ok) {
+            setSubmitted(true);
+            // Optionally auto-login or redirect user
+          } else {
+            const result = await resp.json();
+            alert((result && result.message) || "Registration failed");
+            setSubmitted(false);
+          }
+        })
+        .catch((err) => {
+          alert("Failed to register: " + (err.message || ""));
+          setSubmitted(false);
+        });
     }
   }
 
@@ -278,7 +302,7 @@ function Register() {
                 fontSize: "1.06em",
               }}
             >
-              Registration successful! (simulated)
+              Registration successful!
             </div>
           )}
         </form>

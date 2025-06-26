@@ -2,6 +2,18 @@
 
 This folder contains the Flask RESTful API backend for the HabitTrackerApp.
 
+## Audit Results & Structure
+
+- **Entrypoint:** `app.py` – runs with `Flask` and exposes full REST API at `/api/*`
+- **CORS:** Fully enabled for `/api/*` endpoints, configured via `flask-cors`
+- **Database:** Reads/writes to `../database/*.json` (no DB server needed)
+    - `users.json`, `habits.json`, `progress.json`, `quotes.json`
+- **Routes:** Includes register, login, habits CRUD, progress tracking, quotes, and health check
+- **Dependencies (requirements.txt):** All required (`flask`, `flask-cors`, `flask-restful`, `flask-login`, `gunicorn`)
+    - Verified versions lock compatible
+    - If missing or out of sync, run `pip install -r requirements.txt`
+- **Configuration:** No extra config file; uses .json and OS path logic
+
 ## Setup
 
 - Install dependencies in a virtualenv:
@@ -21,4 +33,7 @@ This folder contains the Flask RESTful API backend for the HabitTrackerApp.
 
 ## Structure
 
-- `app.py` — Flask entrypoint, ready to add resource routes and logic.
+- `app.py` — Flask API entrypoint and route definitions
+- `requirements.txt` — All necessary packages for API/UI CORS
+- `../database/` — Flat-file storage (no migrations needed)
+

@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "name": "Adhirai",
+    "email": "adhirai@email.com",
+    "password": "password123",
+    "avatar": "https://ui-avatars.com/api/?name=Adhirai",
+    "join_date": "2024-06-01"
+  },
+  {
+    "id": 2,
+    "name": "Morgan",
+    "email": "morgan@email.com",
+    "password": "testpass456",
+    "avatar": "https://ui-avatars.com/api/?name=Morgan",
+    "join_date": "2024-06-05"
+  },
+  {
+    "id": 3,
+    "name": "TestUserAPI",
+    "email": "testuserapi.kcw0v9@e2e.local",
+    "password": "TestPassword123",
+    "avatar": "https://ui-avatars.com/api/?name=TestUserAPI",
+    "join_date": "2025-06-26"
+  }
+]

@@ -38,8 +38,31 @@ function Login() {
     e.preventDefault();
     setTouched({ email: true, password: true });
     if (validateEmail(email) && validatePassword(password)) {
-      setSubmitted(true);
-      // TODO: Place authentication API call here
+      // POST to /api/login
+      fetch("/api/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          email: email.trim(),
+          password: password
+        })
+      })
+        .then(async (resp) => {
+          if (resp.ok) {
+            setSubmitted(true);
+            // TODO: store auth state, redirect to dashboard, etc.
+          } else {
+            setSubmitted(false);
+            const result = await resp.json();
+            alert((result && result.message) || "Login failed");
+          }
+        })
+        .catch((err) => {
+          alert("Failed to login: " + (err.message || ""));
+          setSubmitted(false);
+        });
     }
   }
 
@@ -280,7 +303,7 @@ function Login() {
                 fontSize: "1.06em",
               }}
             >
-              Login successful! (simulated)
+              Login successful!
             </div>
           )}
         </form>

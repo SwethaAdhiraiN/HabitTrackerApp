@@ -26,5 +26,6 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  }
+  },
+  "_audit": "Frontend dependencies: react, react-dom, react-router-dom, react-scripts, axios confirmed. Source in src/. No public/ folder detected (may be generated on build)."
 }

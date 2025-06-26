@@ -1,0 +1,465 @@
+.dashboardBg {
+  min-height: 100vh;
+  width: 100vw;
+  background: #FCD8CD;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0;
+}
+
+.header {
+  width: 100%;
+  max-width: 1380px;
+  min-height: 88px;
+  background: white;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  box-shadow: 0 2px 8px rgba(104,127,229,0.08);
+  padding: 24px 56px 20px 56px;
+  border-bottom-left-radius: 26px;
+  border-bottom-right-radius: 26px;
+}
+
+.logo {
+  font-size: 2.1rem;
+  font-weight: 700;
+  color: var(--ht-primary);
+  margin-right: 32px;
+  letter-spacing: 0.01em;
+  flex: 0 0 auto;
+}
+
+.greetingsZone {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1 1 0;
+  min-width: 0;
+  margin-left: 18px;
+}
+
+.greeting {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #333340;
+  line-height: 1.13;
+  letter-spacing: -.01em;
+  margin-bottom: -2px;
+}
+
+.greeting .name {
+  color: var(--ht-primary);
+}
+
+.date {
+  font-size: 1.13rem;
+  font-weight: 500;
+  color: #B0B0C3;
+}
+
+.avatar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.avatarImg {
+  width: 38px;
+  height: 38px;
+  font-size: 2.1rem;
+  background: #EBD6FB;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 3px;
+}
+
+.avatarEmail {
+  font-size: 1.07rem;
+  color: #594F6D;
+  font-weight: 500;
+  opacity: 0.78;
+}
+
+/* Main content area layout */
+.mainWrapper {
+  width: 100%;
+  max-width: 1280px;
+  display: flex;
+  gap: 38px;
+  justify-content: space-between;
+  margin: 44px auto 0 auto;
+  padding: 0 48px 32px 48px;
+  box-sizing: border-box;
+}
+
+/* Habit tracker left zone */
+.habitSection {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.sectionTitle {
+  font-size: 1.58rem;
+  color: #687FE5;
+  font-weight: 700;
+  letter-spacing: 0;
+  margin-bottom: 29px;
+  margin-top: 5px;
+}
+
+.habitCardRow {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  gap: 24px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #EBD6FB #FCD8CD;
+  padding-bottom: 5px;
+}
+.habitCardRow::-webkit-scrollbar {
+  height: 10px;
+}
+.habitCardRow::-webkit-scrollbar-thumb {
+  background: #EBD6FB;
+  border-radius: 9px;
+}
+
+/* Habit Card Style */
+.habitCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 308px;
+  max-width: 364px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(104,127,229,0.08);
+  border-radius: 24px;
+  padding: 32px 28px 24px 23px;
+  margin-bottom: 6px;
+  transition: box-shadow 0.14s, transform 0.14s;
+  cursor: pointer;
+  border: 2.1px solid transparent;
+}
+.habitCard:hover {
+  box-shadow: 0 4px 20px 0 rgba(104,127,229,0.14);
+  border: 2.1px solid #EBD6FB;
+  transform: translateY(-4px) scale(1.013);
+}
+
+.habitCardTopRow {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 19px;
+}
+
+.habitName {
+  font-size: 1.17rem;
+  color: #333340;
+  font-weight: 600;
+  margin-right: auto;
+  letter-spacing: 0.01em;
+  flex: 1 1 0;
+}
+
+.streakIcon {
+  display: flex;
+  align-items: center;
+  background: #FCD8CD;
+  padding: 4px 10px 4px 7px;
+  border-radius: 15px;
+  gap: 3px;
+  font-weight: 600;
+  color: #F8A11E;
+  font-size: 1.07rem;
+  margin-left: 9px;
+}
+.streakCount {
+  margin-left: 1px;
+}
+
+.habitDays {
+  display: flex;
+  flex-direction: row;
+  gap: 9px;
+  align-items: center;
+}
+
+.checkCircleChecked {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: none;
+  transition: background .13s;
+}
+.checkCircleChecked svg circle {
+  fill: #67d88a;
+  transition: fill 0.23s;
+}
+.checkCircleChecked:active svg circle {
+  fill: #2FCE61;
+}
+.checkCircleEmpty {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1.5px solid #B0B0C3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: border 0.19s;
+}
+
+.sidebar {
+  width: 344px;
+  min-width: 280px;
+  max-width: 400px;
+  flex-shrink: 0;
+  margin-left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.widget {
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(104,127,229,0.08);
+  border-radius: 23px;
+  padding: 30px 25px 26px 25px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: 80px;
+  margin-bottom: 0;
+}
+
+.widgetLabel {
+  font-size: 1.12rem;
+  color: #687FE5;
+  font-weight: 700;
+  margin-bottom: 13px;
+  letter-spacing: 0.02em;
+}
+
+.progressList {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 17px;
+}
+.progressStat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.progressValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #22223B;
+  display: flex;
+  align-items: center;
+  min-width: 34px;
+}
+.progressLabel {
+  font-size: 1.11rem;
+  color: #B0B0C3;
+  font-weight: 500;
+}
+
+.quoteBody {
+  margin: 0;
+  border-left: 3px solid #EBD6FB;
+  padding-left: 18px;
+  font-style: italic;
+  font-size: 1.14rem;
+  color: #687FE5;
+}
+.quoteText {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 1.17rem;
+  color: #687FE5;
+  font-style: italic;
+  font-weight: 500;
+}
+.quoteAuthor {
+  text-align: right;
+  display: block;
+  margin-top: 2px;
+  color: #B0B0C3;
+  font-size: 1.03rem;
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* Mini Calendar Widget */
+.calendarWidget {
+  width: 100%;
+  background: #FEEBF6;
+  border-radius: 19px;
+  padding: 18px 19px;
+  box-shadow: 0 2px 8px rgba(104,127,229,0.03);
+  min-height: 76px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  margin-top: 3px;
+}
+
+.calendarHeader {
+  font-size: 1.05rem;
+  color: #687FE5;
+  font-weight: 700;
+  margin-bottom: 9px;
+}
+.calendarDaysRow {
+  width: 100%;
+  display: flex;
+  gap: 9px;
+  justify-content: flex-start;
+}
+.calendarDay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 0.96rem;
+  color: #333340;
+  font-weight: 500;
+}
+.dayLabel {
+  font-size: 0.91rem;
+  color: #B0B0C3;
+  margin-bottom: 2px;
+}
+.dayCircle {
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1.5px solid #EBD6FB;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0;
+  font-size: 1.04rem;
+  font-weight: 700;
+  color: #687FE5;
+}
+.calendarToday .dayCircle {
+  background: #687FE5;
+  color: #fff;
+  font-weight: 700;
+  border: 2.2px solid #4354B8;
+  transition: background 0.16s;
+}
+
+/* Responsive Adaptation */
+@media (max-width: 1200px) {
+  .mainWrapper {
+    max-width: 1000px;
+    padding: 0 24px 24px 24px;
+    gap: 22px;
+  }
+  .sidebar {
+    width: 280px;
+    min-width: 240px;
+    padding-right: 0;
+  }
+}
+@media (max-width: 950px) {
+  .mainWrapper {
+    flex-direction: column;
+    gap: 36px;
+    max-width: 680px;
+    padding: 0 14px 18px 14px;
+  }
+  .sidebar {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    margin-left: 0;
+    flex-direction: row;
+    gap: 24px;
+  }
+  .widget {
+    min-width: 200px;
+    margin-right: 18px;
+    margin-bottom: 0;
+    margin-top: 0;
+    flex: 1 1 0;
+  }
+}
+
+@media (max-width: 700px) {
+  .dashboardBg {
+    padding: 0;
+    min-height: 100vh;
+  }
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 18px 5vw 16px 5vw;
+    min-height: 77px;
+    border-radius: 0 0 21px 21px;
+  }
+  .mainWrapper {
+    flex-direction: column;
+    gap: 16px;
+    max-width: 480px;
+    padding: 0 2vw 12px 2vw;
+  }
+  .sidebar {
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    margin-left: 0;
+    gap: 19px;
+    max-width: 100vw;
+    padding-right: 0;
+    margin-bottom: 18px;
+  }
+  .widget {
+    width: 100%;
+    min-width: 0;
+    margin-right: 0;
+  }
+  .habitCardRow {
+    flex-direction: column;
+    gap: 17px;
+    overflow: visible;
+  }
+  .habitCard {
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+  }
+}
+
+/* Animation for check completion */
+@keyframes popChecked {
+  0% { transform: scale(1); }
+  55% { transform: scale(1.17);}
+  100% { transform: scale(1);}
+}
+.checkCircleChecked {
+  animation: popChecked 0.15s;
+}
+
