@@ -1,74 +1,24 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import styles from "./styles/Dashboard.module.css";
+import UserHeader from "./UserHeader";
 
 /**
  * PUBLIC_INTERFACE
  * Dashboard page container for HabitTrackerApp.
  *
- * - Large, pastel, modern layout for desktop view (matches dashboard_design_notes.md and wireframe).
- * - Enforces pastel peach (#FCD8CD) background, soft cards, and wireframe arrangement, no static/demo habit data.
- * - Loads (future) user data or children widgets, remains non-interactive shell for now.
- * - Sidebar zone ready for widgets: Progress Snapshot, Quote, Mini Calendar.
- * - Responsive design for desktop.
+ * Uses <UserHeader /> to display authenticated user info and logout, styled with the app's pastel palette.
+ * Main area: habit tracking and widgets (Progress, Quote, Calendar), ready for further extension.
  */
 function Dashboard() {
-  // Placeholder for user data, to be replaced when user context/auth is integrated
-  const [user, setUser] = useState(null);
-
-  // Fetch user info (future integration: currently, mimic login success, use fallback)
-  useEffect(() => {
-    // Optionally, user info could be read from a context/auth provider or via API
-    // setUser({...}) or navigate("/login") if not logged in
-    // For now, we'll keep this as a placeholder with a sample name
-    setUser({
-      name: "Your Name",
-      avatar: "", // Set to avatar URL from backend if available
-      email: "",
-    });
-  }, []);
-
-  // Get readable date
-  function prettyToday() {
-    const today = new Date();
-    return today.toLocaleDateString(undefined, {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-    });
+  // Logout callback handled in header, can add more logic here if needed
+  function handleLogout() {
+    // Logic may be added here if necessary in the future
   }
 
   return (
     <div className={styles.dashboardBg}>
-      {/* Header Section */}
-      <header className={styles.header}>
-        <div className={styles.logo} aria-label="HabitTrackerApp Logo" tabIndex={0}>
-          HabitTracker
-        </div>
-        <div className={styles.greetingsZone}>
-          <div className={styles.greeting}>
-            Good morning,
-            <span className={styles.name} style={{ marginLeft: 8 }}>
-              {user ? user.name : "Friend"}
-            </span>
-            !
-          </div>
-          <div className={styles.date}>
-            Today is {prettyToday()}
-          </div>
-        </div>
-        <div className={styles.avatar}>
-          {/* Could show actual avatar here */}
-          <span className={styles.avatarImg}>
-            {user && user.avatar
-              ? <img src={user.avatar} alt="User avatar" style={{ width: "100%", borderRadius: "50%" }} />
-              : <svg width="32" height="32" viewBox="0 0 32 32" fill="#EBD6FB"><circle cx="16" cy="16" r="16" /><text x="50%" y="56%" textAnchor="middle" fontWeight={700} fontSize="15" fill="#687FE5" dy=".3em">{user && user.name ? user.name[0].toUpperCase() : "U"}</text></svg>
-            }
-          </span>
-          {user && user.email && (
-            <span className={styles.avatarEmail}>{user.email}</span>
-          )}
-        </div>
-      </header>
+      {/* User Header Section (handles user info, welcome, date, logout) */}
+      <UserHeader onLogout={handleLogout} />
 
       {/* Main Flex Content */}
       <main className={styles.mainWrapper}>
@@ -148,7 +98,7 @@ function Dashboard() {
                   >
                     {/* Render day number of week for current month as placeholder */}
                     {(() => {
-                      // Show today, otherwise _
+                      // Show today, otherwise –
                       const today = new Date();
                       return today.getDay() === i ? today.getDate() : "–";
                     })()}
