@@ -313,12 +313,12 @@ function Register() {
               marginLeft: 6,
               outline: "none",
             }}
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/login")}
             onMouseOver={e => (e.currentTarget.style.textDecoration = "underline")}
             onFocus={e => (e.currentTarget.style.textDecoration = "underline")}
             onMouseOut={e => (e.currentTarget.style.textDecoration = "none")}
             onBlur={e => (e.currentTarget.style.textDecoration = "none")}
-            aria-label="Go to Sign In"
+            aria-label="Go to Login"
           >
             Sign in
           </button>
