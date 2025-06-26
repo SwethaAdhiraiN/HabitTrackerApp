@@ -1,23 +1,92 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import styles from "./styles/Dashboard.module.css";
 
 /**
  * PUBLIC_INTERFACE
  * Dashboard component for HabitTrackerApp (desktop-optimized).
- * - Top header with user name/greeting/date
- * - Main: "Your Habits This Week" (horizontally scrollable habit cards, each with icon, name, 7-day tracker, streak)
- * - Right sidebar: Progress Snapshot, Quote of the Day, anchored/floating mini-calendar
- * - Pastel palette and highly rounded, soft, modular visuals
- * - All layout and color according to desktop wireframe and style guide
+ * - Fetches user, habits, progress, and quote data asynchronously from JSON files in /database.
+ * - Handles loading and error states, replacing all static/demo values.
+ * - Top header with user name/greeting/date, dynamic UI reflecting mock data from simulated API calls.
  */
-
 function Dashboard() {
-  // Demo user and app data (replace with API data as needed)
-  const user = {
-    name: "Adhirai",
-    email: "adhirai@email.com",
-  };
+  // Loading and error states
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
+  // Data states
+  const [users, setUsers] = useState([]);
+  const [habits, setHabits] = useState([]);
+  const [progress, setProgress] = useState([]);
+  const [quotes, setQuotes] = useState([]);
+
+  // Pick the first user as the "logged in" demo user
+  const [user, setUser] = useState(null);
+  // Determine user's habits and progress dynamically
+  const [userHabits, setUserHabits] = useState([]);
+  const [userProgress, setUserProgress] = useState(null);
+
+  // Random quote for the day
+  const [quoteOfDay, setQuoteOfDay] = useState(null);
+
+  // Fetch all mock data from the JSON files in /database directory relative to app public root.
+  useEffect(() => {
+    let ignore = false;
+    setLoading(true);
+    // Parallel fetch
+    Promise.all([
+      fetch("/database/users.json").then(r => r.json()),
+      fetch("/database/habits.json").then(r => r.json()),
+      fetch("/database/progress.json").then(r => r.json()),
+      fetch("/database/quotes.json").then(r => r.json()),
+    ])
+      .then(([usersData, habitsData, progressData, quotesData]) => {
+        if (ignore) return;
+        setUsers(usersData || []);
+        setHabits(habitsData || []);
+        setProgress(progressData || []);
+        setQuotes(quotesData || []);
+
+        // Demo: pick first user as current user
+        const demoUser = usersData?.[0] || null;
+        setUser(demoUser);
+
+        if (demoUser) {
+          const userHabits = habitsData.filter(h => h.user_id === demoUser.id);
+          setUserHabits(userHabits);
+
+          // Pick progress snapshot for today (if exists), else latest
+          const todayStr = new Date().toISOString().slice(0, 10);
+          let uProgress =
+            progressData.find(
+              (p) => p.user_id === demoUser.id && p.date === todayStr
+            ) ||
+            progressData
+              .filter((p) => p.user_id === demoUser.id)
+              .sort((a, b) => (a.date < b.date ? 1 : -1))[0] ||
+            null;
+          setUserProgress(uProgress);
+        } else {
+          setUserHabits([]);
+          setUserProgress(null);
+        }
+
+        // Random quote for "the day"
+        let dayIdx = (new Date().getDate() + new Date().getMonth()) % (quotesData.length || 1);
+        setQuoteOfDay(quotesData && quotesData[dayIdx]);
+        setError(null);
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (ignore) return;
+        setError("Failed to load data. " + (err.message || ""));
+        setLoading(false);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  // Today label and date, for header
   const today = useMemo(() => {
     const dateObj = new Date();
     return {
@@ -26,92 +95,12 @@ function Dashboard() {
     };
   }, []);
 
-  // Pretend we fetched this for "this week"
-  const habits = [
-    {
-      id: 1,
-      name: "Hydrate",
-      icon: (
-        <HabitIcon bg="#EBD6FB">
-          {/* Water Drop SVG */}
-          <svg width="27" height="27" viewBox="0 0 24 24" fill="#53A9F5">
-            <path d="M12.07 3.5c-.2.1-5 5.6-6 8.8-.8 2.2-.5 5.3 2.5 6.6 2.9 1.2 6.4.5 8.1-2 .8-1.1 1.2-2.3.9-3.7-.8-3-5.2-9.1-5.5-9.7zm.1 14c-2.7 0-4.5-1.7-4.2-4.5l.1-.5.8.5a3.6 3.6 0 002.7.8c.9.1 1.8-.1 2.6-.7l.8-.6.1.5c.3 2.8-1.5 4.5-4.2 4.5z" />
-          </svg>
-        </HabitIcon>
-      ),
-      days: [true, true, true, true, false, false, false],
-      streak: 4, // demo
-    },
-    {
-      id: 2,
-      name: "Meditate",
-      icon: (
-        <HabitIcon bg="#EBD6FB">
-          {/* Lotus SVG */}
-          <svg width="27" height="27" viewBox="0 0 24 24" fill="#F7A1B2">
-            <path d="M12 3a9 9 0 00-9 9 8.98 8.98 0 008 8.93A8.98 8.98 0 0021 12a9 9 0 00-9-9zm0 16c-3.9 0-7-3.1-7-7a6.978 6.978 0 017-7v14z"/>
-          </svg>
-        </HabitIcon>
-      ),
-      days: [false, true, false, true, true, true, false],
-      streak: 3,
-    },
-    {
-      id: 3,
-      name: "Read Book",
-      icon: (
-        <HabitIcon bg="#687FE5">
-          {/* Book SVG */}
-          <svg width="27" height="27" viewBox="0 0 24 24" fill="#fff">
-            <path d="M5 4a3 3 0 0 0-3 3v11a3 3 0 0 0 3 3h3V4H5zm14-1H10v17h9a3 3 0 0 0 3-3V6a3 3 0 0 0-3-3z" />
-          </svg>
-        </HabitIcon>
-      ),
-      days: [false, false, true, true, false, false, true],
-      streak: 2,
-    },
-    {
-      id: 4,
-      name: "Move Body",
-      icon: (
-        <HabitIcon bg="#FEEBF6">
-          {/* Heartbeat SVG */}
-          <svg width="27" height="27" viewBox="0 0 24 24" fill="#687FE5">
-            <path d="M16.5 4.2c-1.7 0-3.4.97-4.24 2.43C11.1 5.17 9.31 4.12 7.5 4.12 4.36 4.12 2 6.8 2 10c0 3.95 6.24 8.36 9.12 9.97.56.31 1.27.31 1.83 0C15.76 18.36 22 13.98 22 10c0-3.2-2.36-5.8-5.5-5.8z"/>
-          </svg>
-        </HabitIcon>
-      ),
-      days: [true, false, true, false, true, false, false],
-      streak: 1,
-    },
-  ];
-
-  // Snapshots and Quote (static for now)
-  const progressStats = [
-    { label: "Total Habits", value: habits.length },
-    {
-      label: "Checkmarks This Week",
-      value: habits.reduce((acc, h) => acc + h.days.filter(Boolean).length, 0),
-    },
-    {
-      label: "Current Longest Streak",
-      value: Math.max(...habits.map((h) => h.streak)),
-      icon: <FlameIcon />,
-    },
-  ];
-
-  // Sample "Quote of the Day"
-  const quote = {
-    text: "Motivation gets you going, but discipline keeps you growing.",
-    author: "John C. Maxwell",
-  };
-
-  // Calendar: generate this week's days
+  // Calendar week computation
   const calendarDays = useMemo(() => {
     const date = new Date();
     const todayIdx = date.getDay(); // 0 (Sun) ... 6 (Sat)
-    // For Monday as first, shift
     const days = [];
+    // Show full week: Sun-Sat
     for (let i = 0; i < 7; i++) {
       const d = new Date(date);
       d.setDate(date.getDate() - todayIdx + i);
@@ -123,6 +112,109 @@ function Dashboard() {
     }
     return days;
   }, []);
+
+  // Progress snapshot calculations
+  const progressStats = useMemo(() => {
+    if (!userProgress || !userHabits.length) return [];
+    // Compute most recent streak
+    let longestStreak = 0;
+    userHabits.forEach(h => {
+      if (h.streak > longestStreak) longestStreak = h.streak;
+    });
+    // Compute checkmarks this week (sum all days: userHabits.days)
+    let weekCheckmarks = userHabits.reduce((sum, h) => sum + h.days.filter(Boolean).length, 0);
+    return [
+      { label: "Total Habits", value: userHabits.length },
+      { label: "Checkmarks This Week", value: weekCheckmarks },
+      { label: "Current Longest Streak", value: longestStreak, icon: <FlameIcon /> },
+    ];
+  }, [userHabits, userProgress]);
+
+  // Loading & error UI
+  if (loading)
+    return (
+      <div className={styles.dashboardBg} style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <span style={{ color: "var(--ht-primary)", fontSize: "1.4rem", fontWeight: 700 }}>
+          Loading your dashboard...
+        </span>
+      </div>
+    );
+  if (error)
+    return (
+      <div className={styles.dashboardBg} style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <span style={{ color: "var(--ht-error)", fontSize: "1.14rem", fontWeight: 700 }}>{error}</span>
+      </div>
+    );
+  if (!user)
+    return (
+      <div className={styles.dashboardBg} style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <span style={{ color: "var(--ht-error)", fontSize: "1.18rem", fontWeight: 700 }}>
+          No user found in demo data.
+        </span>
+      </div>
+    );
+
+  // Icon rendering for demo (SVG selection based on habit.icon string field)
+  function IconFromString(iconStr, bgColor) {
+    switch (iconStr) {
+      case "water_drop":
+        return (
+          <HabitIcon bg={bgColor || "#EBD6FB"}>
+            <svg width="27" height="27" viewBox="0 0 24 24" fill="#53A9F5">
+              <path d="M12.07 3.5c-.2.1-5 5.6-6 8.8-.8 2.2-.5 5.3 2.5 6.6 2.9 1.2 6.4.5 8.1-2 .8-1.1 1.2-2.3.9-3.7-.8-3-5.2-9.1-5.5-9.7zm.1 14c-2.7 0-4.5-1.7-4.2-4.5l.1-.5.8.5a3.6 3.6 0 002.7.8c.9.1 1.8-.1 2.6-.7l.8-.6.1.5c.3 2.8-1.5 4.5-4.2 4.5z" />
+            </svg>
+          </HabitIcon>
+        );
+      case "lotus":
+        return (
+          <HabitIcon bg={bgColor || "#FEEBF6"}>
+            <svg width="27" height="27" viewBox="0 0 24 24" fill="#F7A1B2">
+              <path d="M12 3a9 9 0 00-9 9 8.98 8.98 0 008 8.93A8.98 8.98 0 0021 12a9 9 0 00-9-9zm0 16c-3.9 0-7-3.1-7-7a6.978 6.978 0 017-7v14z"/>
+            </svg>
+          </HabitIcon>
+        );
+      case "book":
+        return (
+          <HabitIcon bg={bgColor || "#687FE5"}>
+            <svg width="27" height="27" viewBox="0 0 24 24" fill="#fff">
+              <path d="M5 4a3 3 0 0 0-3 3v11a3 3 0 0 0 3 3h3V4H5zm14-1H10v17h9a3 3 0 0 0 3-3V6a3 3 0 0 0-3-3z" />
+            </svg>
+          </HabitIcon>
+        );
+      case "heartbeat":
+        return (
+          <HabitIcon bg={bgColor || "#FEEBF6"}>
+            <svg width="27" height="27" viewBox="0 0 24 24" fill="#687FE5">
+              <path d="M16.5 4.2c-1.7 0-3.4.97-4.24 2.43C11.1 5.17 9.31 4.12 7.5 4.12 4.36 4.12 2 6.8 2 10c0 3.95 6.24 8.36 9.12 9.97.56.31 1.27.31 1.83 0C15.76 18.36 22 13.98 22 10c0-3.2-2.36-5.8-5.5-5.8z"/>
+            </svg>
+          </HabitIcon>
+        );
+      case "journal":
+        return (
+          <HabitIcon bg={bgColor || "#EBD6FB"}>
+            <svg width="27" height="27" viewBox="0 0 24 24" fill="#C48DDC">
+              <rect x="4.5" y="3.5" width="15" height="17" rx="4" fill="#EBD6FB"/>
+              <rect x="7" y="7" width="9" height="6" rx="2" fill="#fff"/>
+            </svg>
+          </HabitIcon>
+        );
+      case "walk":
+        return (
+          <HabitIcon bg={bgColor || "#687FE5"}>
+            <svg width="27" height="27" viewBox="0 1 24 22" fill="#687FE5">
+              <circle cx="12" cy="7" r="3" fill="#687FE5"/>
+              <path d="M12 10v7M12 17c0-1 1-2 2-2h1M12 10c-2 0-3 1.5-3 3l.5 2m2.5 2v-5"/>
+            </svg>
+          </HabitIcon>
+        );
+      default:
+        return (
+          <HabitIcon bg={bgColor || "#EBD6FB"}>
+            <svg width="27" height="27" viewBox="0 0 27 27" fill="#FEEBF6"><circle cx="13.5" cy="13.5" r="13.5" /></svg>
+          </HabitIcon>
+        );
+    }
+  }
 
   return (
     <div className={styles.dashboardBg}>
@@ -138,48 +230,66 @@ function Dashboard() {
           </div>
         </div>
         <div className={styles.avatar}>
-          {/* Placeholder avatar */}
-          <span role="img" aria-label="user" className={styles.avatarImg}>
-            🧑‍💻
-          </span>
+          {/* Demo user's avatar or emoji */}
+          {user.avatar ? (
+            <img src={user.avatar} alt={user.name} className={styles.avatarImg} style={{ borderRadius: "50%", width: 38, height: 38, marginRight: 3 }} />
+          ) : (
+            <span role="img" aria-label="user" className={styles.avatarImg}>
+              🧑‍💻
+            </span>
+          )}
           <span className={styles.avatarEmail}>{user.email}</span>
         </div>
       </header>
       <main className={styles.mainWrapper}>
         <section className={styles.habitSection}>
           <h1 className={styles.sectionTitle}>Your Habits This Week</h1>
-          <div className={styles.habitCardRow}>
-            {habits.map((habit) => (
-              <HabitCard
-                key={habit.id}
-                icon={habit.icon}
-                name={habit.name}
-                days={habit.days}
-                streak={habit.streak}
-              />
-            ))}
-          </div>
+          {userHabits.length === 0 ? (
+            <div style={{ color: "var(--ht-error)", fontWeight: 600, fontSize: "1.1rem", padding: "12px 0" }}>
+              You have no habits yet!
+            </div>
+          ) : (
+            <div className={styles.habitCardRow}>
+              {userHabits.map((habit) => (
+                <HabitCard
+                  key={habit.id}
+                  icon={IconFromString(habit.icon)}
+                  name={habit.name}
+                  days={habit.days}
+                  streak={habit.streak}
+                />
+              ))}
+            </div>
+          )}
         </section>
         <aside className={styles.sidebar}>
           <div className={styles.widget}>
             <div className={styles.widgetLabel}>Progress Snapshot</div>
             <div className={styles.progressList}>
-              {progressStats.map((stat, i) => (
-                <div key={i} className={styles.progressStat}>
-                  <span className={styles.progressValue}>
-                    {stat.icon ? stat.icon : null}
-                    {stat.value}
-                  </span>
-                  <span className={styles.progressLabel}>{stat.label}</span>
-                </div>
-              ))}
+              {progressStats.length === 0 ? (
+                <span style={{ color: "var(--ht-secondary-text)" }}>No progress data found.</span>
+              ) : (
+                progressStats.map((stat, i) => (
+                  <div key={i} className={styles.progressStat}>
+                    <span className={styles.progressValue}>
+                      {stat.icon ? stat.icon : null}
+                      {stat.value}
+                    </span>
+                    <span className={styles.progressLabel}>{stat.label}</span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
           <div className={styles.widget}>
             <div className={styles.widgetLabel}>Quote of the Day</div>
             <blockquote className={styles.quoteBody}>
-              <span className={styles.quoteText}>&ldquo;{quote.text}&rdquo;</span>
-              <span className={styles.quoteAuthor}>— {quote.author}</span>
+              <span className={styles.quoteText}>
+                &ldquo;{quoteOfDay ? quoteOfDay.text : "No quote found."}&rdquo;
+              </span>
+              <span className={styles.quoteAuthor}>
+                — {quoteOfDay ? quoteOfDay.author : ""}
+              </span>
             </blockquote>
           </div>
           <div className={styles.widget} style={{ position: "relative", minHeight: 90 }}>

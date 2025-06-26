@@ -12,79 +12,98 @@ import "./styles/theme.css";
  * - Prominent accent "Register" button (top-right).
  * - All color, type, radius, and spacing per extracted style guidance.
  */
+import React, { useEffect, useState, useMemo } from "react";
+const habitIcons = {
+  water_drop: (
+    <span style={{
+      display: "flex", alignItems: "center", justifyContent: "center",
+      width: 36, height: 36, borderRadius: 10, background: "var(--ht-surface)",
+    }}>
+      <svg height="22" width="22" viewBox="0 0 20 20" fill="#53A9F5">
+        <path d="M10.1 3.3c-.2.1-4.6 5.1-5.5 8.1-.7 2.1-.4 4.9 2.3 6a5.3 5.3 0 005.6-1c2-1.7 2.4-4 1.7-6.2-.8-2.8-4-7-4-7zm.2 12.4c-2.4 0-4-1.7-3.8-4.1l.1-.5.8.6c.6.5 1.6.7 2.4.7s1.8-.3 2.4-.7l.8-.6.1.5c.2 2.4-1.4 4.1-3.8 4.1z"/>
+      </svg>
+    </span>
+  ),
+  book: (
+    <span style={{
+      display: "flex", alignItems: "center", justifyContent: "center",
+      width: 36, height: 36, borderRadius: 10, background: "var(--ht-surface)"
+    }}>
+      <svg width="22" height="22" viewBox="0 0 20 20" fill="#C48DDC">
+        <path d="M3 4.5C3 3.7 3.7 3 4.5 3h6c.8 0 1.5.7 1.5 1.5v11c0 .3-.2.5-.5.5s-.5-.2-.5-.5V4.5c0-.3-.2-.5-.5-.5h-6C3.2 4 3 4.2 3 4.5V16c0 .3.2.5.5.5s.5-.2.5-.5V4.5zm13 0c0-.8-.7-1.5-1.5-1.5h-2c-.3 0-.5.2-.5.5s.2.5.5.5h2c.3 0 .5.2.5.5v12c0 .3-.2.5-.5.5h-2c-.3 0-.5.2-.5.5s.2.5.5.5h2c.8 0 1.5-.7 1.5-1.5V4.5z"/>
+      </svg>
+    </span>
+  ),
+  lotus: (
+    <span style={{
+      display: "flex", alignItems: "center", justifyContent: "center",
+      width: 36, height: 36, borderRadius: 10, background: "var(--ht-surface)"
+    }}>
+      <svg width="22" height="22" viewBox="0 0 20 20" fill="#F7A1B2">
+        <path d="M10 17s-5.7-2.8-7.2-6C1 7.7 3.5 5 6.1 5c1.3 0 2.5.7 3.2 1.8C10.4 5.7 11.6 5 12.9 5c2.6 0 5.1 2.7 3.3 6C15.7 14.2 10 17 10 17z"/>
+      </svg>
+    </span>
+  ),
+  heartbeat: (
+    <span style={{
+      display: "flex", alignItems: "center", justifyContent: "center",
+      width: 36, height: 36, borderRadius: 10, background: "var(--ht-surface)"
+    }}>
+      <svg width="22" height="22" viewBox="0 0 20 20" fill="#F7A1B2">
+        <path d="M10 17s-5.7-2.8-7.2-6C1 7.7 3.5 5 6.1 5c1.3 0 2.5.7 3.2 1.8C10.4 5.7 11.6 5 12.9 5c2.6 0 5.1 2.7 3.3 6C15.7 14.2 10 17 10 17z"/>
+      </svg>
+    </span>
+  ),
+  // fallback:
+  default: (
+    <span style={{
+      display: "flex", alignItems: "center", justifyContent: "center",
+      width: 36, height: 36, borderRadius: 10, background: "var(--ht-surface)"
+    }}>
+      <svg width="22" height="22" viewBox="0 0 20 20" fill="#687FE5"><circle cx="10" cy="10" r="10"/></svg>
+    </span>
+  ),
+};
+
 function HomePage() {
   const navigate = useNavigate();
+  // --- Async mock data state ---
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Demo data (shown as per design notes)
-  const habits = [
-    {
-      name: "Drink Water",
-      icon: (
-        // Blue water drop icon with pastel blue bg
-        <span style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: 36,
-          height: 36,
-          borderRadius: 10,
-          background: "var(--ht-surface)",
-        }}>
-          {/* Water drop SVG */}
-          <svg height="22" width="22" viewBox="0 0 20 20" fill="#53A9F5">
-            <path d="M10.1 3.3c-.2.1-4.6 5.1-5.5 8.1-.7 2.1-.4 4.9 2.3 6a5.3 5.3 0 005.6-1c2-1.7 2.4-4 1.7-6.2-.8-2.8-4-7-4-7zm.2 12.4c-2.4 0-4-1.7-3.8-4.1l.1-.5.8.6c.6.5 1.6.7 2.4.7s1.8-.3 2.4-.7l.8-.6.1.5c.2 2.4-1.4 4.1-3.8 4.1z"/>
-          </svg>
-        </span>
-      ),
-      progress: [true, true, false], // checkmark/empty/progress indicators
-      accent: "var(--ht-primary)",
-    },
-    {
-      name: "Read Book",
-      icon: (
-        // Purple book icon with pastel pink bg
-        <span style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: 36,
-          height: 36,
-          borderRadius: 10,
-          background: "var(--ht-surface)",
-        }}>
-          {/* Book SVG */}
-          <svg width="22" height="22" viewBox="0 0 20 20" fill="#C48DDC">
-            <path d="M3 4.5C3 3.7 3.7 3 4.5 3h6c.8 0 1.5.7 1.5 1.5v11c0 .3-.2.5-.5.5s-.5-.2-.5-.5V4.5c0-.3-.2-.5-.5-.5h-6C3.2 4 3 4.2 3 4.5V16c0 .3.2.5.5.5s.5-.2.5-.5V4.5zm13 0c0-.8-.7-1.5-1.5-1.5h-2c-.3 0-.5.2-.5.5s.2.5.5.5h2c.3 0 .5.2.5.5v12c0 .3-.2.5-.5.5h-2c-.3 0-.5.2-.5.5s.2.5.5.5h2c.8 0 1.5-.7 1.5-1.5V4.5z"/>
-          </svg>
-        </span>
-      ),
-      progress: [true, false, false],
-      accent: "var(--ht-primary)",
-    },
-    {
-      name: "Meditate",
-      icon: (
-        // Pink heart/power icon with pastel pink bg
-        <span style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: 36,
-          height: 36,
-          borderRadius: 10,
-          background: "var(--ht-surface)",
-        }}>
-          {/* Heart SVG */}
-          <svg width="22" height="22" viewBox="0 0 20 20" fill="#F7A1B2">
-            <path d="M10 17s-5.7-2.8-7.2-6C1 7.7 3.5 5 6.1 5c1.3 0 2.5.7 3.2 1.8C10.4 5.7 11.6 5 12.9 5c2.6 0 5.1 2.7 3.3 6C15.7 14.2 10 17 10 17z"/>
-          </svg>
-        </span>
-      ),
-      progress: [true, true, true],
-      accent: "var(--ht-primary)",
-    },
-  ];
+  // Demo: show first user's habits
+  const [habits, setHabits] = useState([]);
+  const [quotes, setQuotes] = useState([]);
+  const [quoteOfDay, setQuoteOfDay] = useState(null);
 
+  useEffect(() => {
+    let ignore = false;
+    setLoading(true);
+    Promise.all([
+      fetch("/database/habits.json").then(r => r.json()),
+      fetch("/database/quotes.json").then(r => r.json())
+    ])
+      .then(([habitsData, quotesData]) => {
+        if (ignore) return;
+        // Pick first 3 habits for the homepage
+        setHabits((habitsData && habitsData.slice(0, 3)) || []);
+        setQuotes(quotesData || []);
+        let dayIdx = (new Date().getDate() + new Date().getMonth()) % ((quotesData && quotesData.length) || 1);
+        setQuoteOfDay(quotesData && quotesData[dayIdx]);
+        setLoading(false);
+        setError(null);
+      })
+      .catch((err) => {
+        if (ignore) return;
+        setError("Failed to load demo data. " + (err.message || ""));
+        setLoading(false);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  // Compose/render homepage
   return (
     <div
       // Gradient pastel background (lavender → pink), vertical, as per style guide.
@@ -261,34 +280,44 @@ function HomePage() {
             justifyContent: "center",
           }}
         >
-          <div
-            style={{
-              fontSize: "1.27rem",
-              color: "var(--ht-primary-text)",
-              fontWeight: 700,
-              textAlign: "center",
-              lineHeight: 1.35,
-              letterSpacing: 0.1,
-              marginBottom: 9,
-              maxWidth: 280,
-              fontFamily: '"Helvetica Neue", Arial, sans-serif',
-              textShadow: "0 3px 14px rgba(104,127,229,0.07)",
-            }}
-          >
-            "Small habits, when repeated daily, lead to truly remarkable results."
-          </div>
-          <div
-            style={{
-              fontSize: "1.02rem",
-              color: "var(--ht-primary)",
-              fontWeight: 600,
-              marginTop: 2,
-              textAlign: "center",
-              letterSpacing: 0.02,
-            }}
-          >
-            Start today—your future self will thank you!
-          </div>
+          {loading ? (
+            <div style={{color: "var(--ht-primary)", fontWeight: 700, fontSize: "1.15em"}}>Loading…</div>
+          ) : error ? (
+            <div style={{color: "var(--ht-error)", fontWeight: 600, fontSize: "1.1em"}}>{error}</div>
+          ) : quoteOfDay ? (
+            <>
+            <div
+              style={{
+                fontSize: "1.27rem",
+                color: "var(--ht-primary-text)",
+                fontWeight: 700,
+                textAlign: "center",
+                lineHeight: 1.35,
+                letterSpacing: 0.1,
+                marginBottom: 9,
+                maxWidth: 280,
+                fontFamily: '"Helvetica Neue", Arial, sans-serif',
+                textShadow: "0 3px 14px rgba(104,127,229,0.07)",
+              }}
+            >
+              "{quoteOfDay.text}"
+            </div>
+            <div
+              style={{
+                fontSize: "1.02rem",
+                color: "var(--ht-primary)",
+                fontWeight: 600,
+                marginTop: 2,
+                textAlign: "center",
+                letterSpacing: 0.02,
+              }}
+            >
+              {quoteOfDay.author}
+            </div>
+            </>
+          ) : (
+            <div style={{color: "var(--ht-secondary-text)"}}>No quote found.</div>
+          )}
         </section>
 
         {/* 3. Habits List Card */}
@@ -314,9 +343,15 @@ function HomePage() {
             Habits
           </div>
           <div>
-            {habits.map((habit, i) => (
+            {loading ? (
+              <div style={{color: "var(--ht-primary)", fontWeight: 700}}>Loading…</div>
+            ) : error ? (
+              <div style={{color: "var(--ht-error)", fontWeight: 600}}>{error}</div>
+            ) : habits.length === 0 ? (
+              <div style={{color: "var(--ht-secondary-text)"}}>No demo habits found.</div>
+            ) : habits.map((habit, i) => (
               <div
-                key={habit.name}
+                key={habit.id || i}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -324,7 +359,9 @@ function HomePage() {
                   padding: "4px 0",
                 }}
               >
-                <div style={{ marginRight: 13 }}>{habit.icon}</div>
+                <div style={{ marginRight: 13 }}>
+                  {habitIcons[habit.icon] || habitIcons.default}
+                </div>
                 <div style={{
                   flex: 1,
                   fontSize: "1.06rem",
@@ -337,7 +374,7 @@ function HomePage() {
                   {habit.name}
                 </div>
                 <div style={{ display: "flex", gap: 5, marginLeft: 8 }}>
-                  {habit.progress.map((completed, idx) =>
+                  {(habit.days || [false, false, false]).slice(0, 3).map((completed, idx) =>
                     completed ? (
                       <span
                         key={idx}
@@ -351,7 +388,6 @@ function HomePage() {
                           justifyContent: "center",
                         }}
                       >
-                        {/* Check SVG */}
                         <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                           <path
                             d="M3 7l2 2 4-4"
@@ -381,7 +417,6 @@ function HomePage() {
             ))}
           </div>
         </section>
-        {/* Implementation matches extracted visual style: gradient, card stacking, card/circle/typography/colors/badge and Register button following the style guide. */}
       </main>
     </div>
   );
