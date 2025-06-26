@@ -348,7 +348,7 @@ function HomePage() {
             ) : error ? (
               <div style={{color: "var(--ht-error)", fontWeight: 600}}>{error}</div>
             ) : habits.length === 0 ? (
-              <div style={{color: "var(--ht-secondary-text)"}}>No demo habits found.</div>
+              <div style={{color: "var(--ht-secondary-text)"}}>No habits found (demo).</div>
             ) : habits.map((habit, i) => (
               <div
                 key={habit.id || i}

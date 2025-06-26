@@ -28,51 +28,57 @@ function Dashboard() {
   // Random quote for the day
   const [quoteOfDay, setQuoteOfDay] = useState(null);
 
-  // Fetch all mock data from the JSON files in /database directory relative to app public root.
+  // Fetch data from backend API endpoints
   useEffect(() => {
     let ignore = false;
     setLoading(true);
-    // Parallel fetch
+
+    // Simulate user id = 1 for demo
+    const userId = 1;
+
+    // Parallel fetch for API responses
     Promise.all([
-      fetch("/database/users.json").then(r => r.json()),
-      fetch("/database/habits.json").then(r => r.json()),
-      fetch("/database/progress.json").then(r => r.json()),
-      fetch("/database/quotes.json").then(r => r.json()),
+      fetch(`/api/user/${userId}`).then(async r => {
+        if (!r.ok) throw new Error("User not found");
+        const data = await r.json();
+        return data.user;
+      }),
+      fetch(`/api/habits?user_id=${userId}`).then(async r => {
+        if (!r.ok) throw new Error("Habits fetch failed");
+        const data = await r.json();
+        return data.habits;
+      }),
+      fetch(`/api/progress?user_id=${userId}`).then(async r => {
+        if (!r.ok) throw new Error("Progress fetch failed");
+        const data = await r.json();
+        return data.progress;
+      }),
+      fetch(`/api/quote`).then(async r => {
+        if (!r.ok) throw new Error("Quote fetch failed");
+        const data = await r.json();
+        return data.quote;
+      }),
     ])
-      .then(([usersData, habitsData, progressData, quotesData]) => {
+      .then(([userData, habitsData, progressData, quoteData]) => {
         if (ignore) return;
-        setUsers(usersData || []);
-        setHabits(habitsData || []);
-        setProgress(progressData || []);
-        setQuotes(quotesData || []);
+        setUser(userData);
+        setUsers([userData]);
+        setHabits(habitsData);
+        setUserHabits(habitsData);
 
-        // Demo: pick first user as current user
-        const demoUser = usersData?.[0] || null;
-        setUser(demoUser);
-
-        if (demoUser) {
-          const userHabits = habitsData.filter(h => h.user_id === demoUser.id);
-          setUserHabits(userHabits);
-
-          // Pick progress snapshot for today (if exists), else latest
+        // Show most recent progress for the user
+        if (progressData && progressData.length > 0) {
+          // Find today or latest
           const todayStr = new Date().toISOString().slice(0, 10);
           let uProgress =
-            progressData.find(
-              (p) => p.user_id === demoUser.id && p.date === todayStr
-            ) ||
-            progressData
-              .filter((p) => p.user_id === demoUser.id)
-              .sort((a, b) => (a.date < b.date ? 1 : -1))[0] ||
-            null;
+            progressData.find((p) => p.date === todayStr)
+              || progressData.sort((a, b) => (a.date < b.date ? 1 : -1))[0];
           setUserProgress(uProgress);
         } else {
-          setUserHabits([]);
           setUserProgress(null);
         }
-
-        // Random quote for "the day"
-        let dayIdx = (new Date().getDate() + new Date().getMonth()) % (quotesData.length || 1);
-        setQuoteOfDay(quotesData && quotesData[dayIdx]);
+        setQuotes([quoteData]);
+        setQuoteOfDay(quoteData);
         setError(null);
         setLoading(false);
       })
@@ -81,6 +87,7 @@ function Dashboard() {
         setError("Failed to load data. " + (err.message || ""));
         setLoading(false);
       });
+
     return () => {
       ignore = true;
     };

@@ -22,5 +22,15 @@
     "total_checked": 2,
     "total_habits": 2,
     "success_rate": 1.0
+  },
+  {
+    "user_id": 3,
+    "date": "2025-06-26",
+    "habit_checkmarks": {
+      "7": true
+    },
+    "total_checked": 1,
+    "total_habits": 1,
+    "success_rate": 1.0
   }
 ]
