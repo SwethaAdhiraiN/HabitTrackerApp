@@ -50,7 +50,10 @@ function Register() {
         .then(async (resp) => {
           if (resp.ok) {
             setSubmitted(true);
-            // Optionally auto-login or redirect user
+            // After a brief moment, redirect to dashboard upon registration success
+            setTimeout(() => {
+              navigate("/dashboard");
+            }, 650); // short delay for visual feedback
           } else {
             const result = await resp.json();
             alert((result && result.message) || "Registration failed");
