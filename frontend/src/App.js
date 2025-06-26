@@ -245,43 +245,48 @@ function HomePage() {
           </div>
         </section>
 
-        {/* 2. Stats Card */}
+        {/* 2. Motivational Quote Card */}
         <section
           style={{
             width: "100%",
             background: "rgba(255,255,255,0.98)",
             borderRadius: 18,
             boxShadow: "0 2px 12px rgba(123,97,255,0.10)",
-            padding: "22px 18px 20px 18px",
+            padding: "28px 18px 26px 18px",
             marginBottom: 24,
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
+            justifyContent: "center",
           }}
         >
-          <div style={{ fontSize: "2rem", fontWeight: 700, color: "var(--ht-primary)" }}>
-            80%
-          </div>
           <div
             style={{
-              fontWeight: 600,
-              color: "#3B1877",
-              marginTop: 2,
-              fontSize: "1.08rem",
-            }}
-          >
-            Success rate
-          </div>
-          <div
-            style={{
-              fontSize: "1rem",
-              color: "var(--ht-secondary-text)",
-              marginTop: 5,
+              fontSize: "1.27rem",
+              color: "var(--ht-primary-text)",
+              fontWeight: 700,
               textAlign: "center",
-              fontWeight: 400,
+              lineHeight: 1.35,
+              letterSpacing: 0.1,
+              marginBottom: 9,
+              maxWidth: 280,
+              fontFamily: '"Helvetica Neue", Arial, sans-serif',
+              textShadow: "0 3px 14px rgba(104,127,229,0.07)",
             }}
           >
-            Keep up the great work—consistency is the key!
+            "Small habits, when repeated daily, lead to truly remarkable results."
+          </div>
+          <div
+            style={{
+              fontSize: "1.02rem",
+              color: "var(--ht-primary)",
+              fontWeight: 600,
+              marginTop: 2,
+              textAlign: "center",
+              letterSpacing: 0.02,
+            }}
+          >
+            Start today—your future self will thank you!
           </div>
         </section>
 
