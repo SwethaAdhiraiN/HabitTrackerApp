@@ -7,7 +7,10 @@
       "2": false,
       "3": true,
       "4": true
-    }
+    },
+    "total_checked": 3,
+    "total_habits": 4,
+    "success_rate": 0.75
   },
   {
     "user_id": 2,
@@ -15,6 +18,9 @@
     "habit_checkmarks": {
       "5": true,
       "6": true
-    }
+    },
+    "total_checked": 2,
+    "total_habits": 2,
+    "success_rate": 1.0
   }
 ]
