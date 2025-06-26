@@ -22,5 +22,13 @@
     "password": "TestPassword123",
     "avatar": "https://ui-avatars.com/api/?name=TestUserAPI",
     "join_date": "2025-06-26"
+  },
+  {
+    "id": 4,
+    "name": "TestDebug",
+    "email": "testdebug@example.com",
+    "password": "debugpass123",
+    "avatar": "https://ui-avatars.com/api/?name=TestDebug",
+    "join_date": "2025-06-26"
   }
 ]

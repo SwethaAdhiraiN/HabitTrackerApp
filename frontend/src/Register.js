@@ -35,8 +35,8 @@ function Register() {
     e.preventDefault();
     setTouched({ email: true, password: true });
     if (validateEmail(email) && validatePassword(password)) {
-      // Make API call to Flask backend /api/register (POST)
-      fetch("/api/register", {
+      // Make API call to /api/register but guard against network/parse errors and wrong content-type
+      fetch("http://localhost:5000/api/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -48,20 +48,37 @@ function Register() {
         })
       })
         .then(async (resp) => {
-          if (resp.ok) {
+          // Check for Content-Type: application/json and status
+          const contentType = resp.headers.get("content-type");
+          if (resp.ok && contentType && contentType.includes("application/json")) {
             setSubmitted(true);
             // After a brief moment, redirect to dashboard upon registration success
             setTimeout(() => {
               navigate("/dashboard");
             }, 650); // short delay for visual feedback
           } else {
-            const result = await resp.json();
-            alert((result && result.message) || "Registration failed");
+            // try to parse JSON error body (may be 400/409), but fallback if not JSON
+            let result = null;
+            let errorMessage = "Registration failed: Unable to connect to the server or invalid response.";
+            try {
+              if (contentType && contentType.includes("application/json")) {
+                result = await resp.json();
+                if (result && result.message) {
+                  errorMessage = "Registration failed: " + result.message;
+                }
+              } else {
+                // Not json - likely HTML/server error page
+                errorMessage = "Registration failed: Unable to connect to the server or invalid response.";
+              }
+            } catch {
+              // Parsing failed
+            }
+            alert(errorMessage);
             setSubmitted(false);
           }
         })
         .catch((err) => {
-          alert("Failed to register: " + (err.message || ""));
+          alert("Registration failed: Unable to connect to the server or invalid response.");
           setSubmitted(false);
         });
     }
