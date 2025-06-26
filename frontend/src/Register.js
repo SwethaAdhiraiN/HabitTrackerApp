@@ -5,6 +5,15 @@ import "./styles/theme.css";
 /**
  * PUBLIC_INTERFACE
  * Register page for HabitTrackerApp.
+ *
+ * IMPORTANT:
+ * - This component sends POST requests to '/api/register' (relative path) so React proxy or CORS works as intended.
+ * - Do NOT use a full URL (e.g., 'http://localhost:5000/api/register') or the proxy will be bypassed.
+ * - Payload sent: { name: str, email: str, password: str }
+ * - On registration success, the backend returns { success: true, user: {fields} } in JSON.
+ * - Upon success, user is routed to '/dashboard'.
+ * See CORS_and_Proxy_Working_Configuration.md for proxy/CORS overview.
+ *
  * Fully matches the register design reference:
  * - Modal, pastel gradient background, beautiful spacing
  * - Inputs, button, colors, and alignment as per extracted design notes
@@ -41,44 +50,52 @@ function Register() {
         headers: {
           "Content-Type": "application/json"
         },
+        // Payload must have "name", "email", "password" as strings—backend checks these.
         body: JSON.stringify({
-          name: email.split("@")[0], // Use prefix as name fallback
+          name: email.split("@")[0] || "User", // Use prefix (left of @) as minimal name fallback
           email: email.trim(),
           password: password
         })
       })
         .then(async (resp) => {
-          // Check for Content-Type: application/json and status
           const contentType = resp.headers.get("content-type");
+          // Accept all HTTP 2xx responses with JSON as success
           if (resp.ok && contentType && contentType.includes("application/json")) {
             setSubmitted(true);
-            // After a brief moment, redirect to dashboard upon registration success
-            setTimeout(() => {
-              navigate("/dashboard");
-            }, 650); // short delay for visual feedback
+            // Confirm success by checking body for success: true (to match backend API)
+            try {
+              const result = await resp.json();
+              if (result && result.success) {
+                setTimeout(() => {
+                  navigate("/dashboard");
+                }, 650); // short delay for visual feedback
+                return;
+              }
+              // If result.success is not true, treat as error
+              alert("Registration failed: " + (result.message || "Unknown error, please try again."));
+              setSubmitted(false);
+            } catch {
+              alert("Registration failed: Invalid response from server.");
+              setSubmitted(false);
+            }
           } else {
-            // try to parse JSON error body (may be 400/409), but fallback if not JSON
-            let result = null;
+            // Handle failure: show server message if available
             let errorMessage = "Registration failed: Unable to connect to the server or invalid response.";
             try {
               if (contentType && contentType.includes("application/json")) {
-                result = await resp.json();
-                if (result && result.message) {
-                  errorMessage = "Registration failed: " + result.message;
+                const errorResult = await resp.json();
+                if (errorResult && errorResult.message) {
+                  errorMessage = "Registration failed: " + errorResult.message;
                 }
-              } else {
-                // Not json - likely HTML/server error page
-                errorMessage = "Registration failed: Unable to connect to the server or invalid response.";
               }
-            } catch {
-              // Parsing failed
-            }
+            } catch { }
             alert(errorMessage);
             setSubmitted(false);
           }
         })
         .catch((err) => {
-          alert("Registration failed: Unable to connect to the server or invalid response.");
+          // If fetch itself fails, it can be a proxy or CORS failure, or network/backend down
+          alert("Registration failed: Network error, misconfigured proxy, or backend not running. " + (err.message || ""));
           setSubmitted(false);
         });
     }
