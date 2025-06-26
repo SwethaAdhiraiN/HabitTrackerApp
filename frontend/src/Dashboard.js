@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import styles from "./styles/Dashboard.module.css";
 import UserHeader from "./UserHeader";
+import ProgressSnapshotWidget from "./ProgressSnapshotWidget";
 
 /**
  * Fetches and returns the current and longest streak info for a habit.
@@ -493,18 +494,8 @@ function Dashboard() {
 
         {/* Sidebar */}
         <aside className={styles.sidebar}>
-          {/* Progress Snapshot widget card (empty for now) */}
-          <div className={styles.widget} aria-label="Progress snapshot">
-            <div className={styles.widgetLabel}>Progress Snapshot</div>
-            <div className={styles.progressList}>
-              <span
-                className={styles.progressStat}
-                style={{ color: "var(--ht-secondary-text)", fontSize: "1rem", fontStyle: "italic" }}
-              >
-                Progress stats will show here.
-              </span>
-            </div>
-          </div>
+          {/* Progress Snapshot widget card (implements progress snapshot) */}
+          <ProgressSnapshotWidget userId={user?.id} />
           {/* Quote of the Day */}
           <div className={styles.widget} aria-label="Quote of the Day">
             <div className={styles.widgetLabel}>Quote of the Day</div>
