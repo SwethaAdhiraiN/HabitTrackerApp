@@ -24,6 +24,7 @@ function Register() {
   const [password, setPassword] = useState("");
   const [touched, setTouched] = useState({ email: false, password: false });
   const [submitted, setSubmitted] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(""); // Adds error display for duplicate email or other errors
 
   const navigate = useNavigate();
 
@@ -43,59 +44,71 @@ function Register() {
   function handleSubmit(e) {
     e.preventDefault();
     setTouched({ email: true, password: true });
+    setErrorMsg(""); // Clear last error
     if (validateEmail(email) && validatePassword(password)) {
-      // Make API call to /api/register using relative path so frontend proxy or CORS works correctly
       fetch("/api/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        // Payload must have "name", "email", "password" as strings—backend checks these.
         body: JSON.stringify({
-          name: email.split("@")[0] || "User", // Use prefix (left of @) as minimal name fallback
+          name: email.split("@")[0] || "User",
           email: email.trim(),
           password: password
         })
       })
         .then(async (resp) => {
           const contentType = resp.headers.get("content-type");
-          // Accept all HTTP 2xx responses with JSON as success
           if (resp.ok && contentType && contentType.includes("application/json")) {
             setSubmitted(true);
-            // Confirm success by checking body for success: true (to match backend API)
             try {
               const result = await resp.json();
               if (result && result.success) {
+                // Store user in session/localStorage as with login
+                if (result.user) {
+                  window.sessionStorage.setItem("habit_user", JSON.stringify(result.user));
+                  window.localStorage.setItem("habit_user", JSON.stringify(result.user));
+                }
                 setTimeout(() => {
                   navigate("/dashboard");
-                }, 650); // short delay for visual feedback
+                }, 650);
                 return;
               }
-              // If result.success is not true, treat as error
-              alert("Registration failed: " + (result.message || "Unknown error, please try again."));
+              // For backup, show error message from body (should not hit here, but just in case)
+              setErrorMsg(result && result.message ? result.message : "Registration failed. Please try again.");
               setSubmitted(false);
             } catch {
-              alert("Registration failed: Invalid response from server.");
+              setErrorMsg("Registration failed: Invalid response from server.");
               setSubmitted(false);
             }
           } else {
-            // Handle failure: show server message if available
             let errorMessage = "Registration failed: Unable to connect to the server or invalid response.";
             try {
               if (contentType && contentType.includes("application/json")) {
                 const errorResult = await resp.json();
-                if (errorResult && errorResult.message) {
-                  errorMessage = "Registration failed: " + errorResult.message;
+                // If this is the duplicate email error (HTTP 409), detect and display as a warning
+                if (resp.status === 409 && errorResult && errorResult.message &&
+                    (errorResult.message.toLowerCase().includes("email already registered") ||
+                     errorResult.message.toLowerCase().includes("already registered"))
+                ) {
+                  setErrorMsg("User email already registered");
+                } else if (errorResult && errorResult.message) {
+                  errorMessage = errorResult.message;
+                  setErrorMsg(errorMessage);
+                } else {
+                  setErrorMsg(errorMessage);
                 }
+              } else {
+                setErrorMsg(errorMessage);
               }
-            } catch { }
-            alert(errorMessage);
+            } catch {
+              setErrorMsg(errorMessage);
+            }
             setSubmitted(false);
           }
         })
         .catch((err) => {
-          // If fetch itself fails, it can be a proxy or CORS failure, or network/backend down
-          alert("Registration failed: Network error, misconfigured proxy, or backend not running. " + (err.message || ""));
+          setErrorMsg("Registration failed: Network error, misconfigured proxy, or backend not running. " + (err.message || ""));
           setSubmitted(false);
         });
     }
@@ -328,7 +341,28 @@ function Register() {
           >
             Register
           </button>
-          {/* Registration Message (Simulated) */}
+          {/* Duplicate Email or Error Message */}
+          {errorMsg && (
+            <div
+              style={{
+                marginTop: 14,
+                marginBottom: 4,
+                color: "var(--ht-error, #F87A77)",
+                textAlign: "center",
+                fontWeight: 600,
+                fontSize: "1.07em",
+                letterSpacing: 0,
+                padding: 0,
+                lineHeight: 1.3,
+                minHeight: 17,
+                /* accessibility: readable and stands out */
+              }}
+              role="alert"
+              aria-live="polite"
+            >
+              {errorMsg}
+            </div>
+          )}
           {submitted && (
             <div
               style={{

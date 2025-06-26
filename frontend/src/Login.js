@@ -56,6 +56,9 @@ function Login() {
               const result = await resp.json();
               // Only redirect if backend confirms login is successful and user/token is present
               if (result && result.success && result.user && result.user.id) {
+                // Store user in session/localStorage so Dashboard can pick up
+                window.sessionStorage.setItem("habit_user", JSON.stringify(result.user));
+                window.localStorage.setItem("habit_user", JSON.stringify(result.user));
                 setSubmitted(true);
                 setTimeout(() => {
                   navigate("/dashboard");
