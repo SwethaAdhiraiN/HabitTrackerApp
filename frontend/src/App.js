@@ -78,23 +78,36 @@ function HomePage() {
   useEffect(() => {
     let ignore = false;
     setLoading(true);
+    // We'll use user_id=1 for demo habit fetch; quotes from /api/quote (returns one)
+    // First, fetch /api/habits?user_id=1 and /api/quote for quote of the day
     Promise.all([
-      fetch("/database/habits.json").then(r => r.json()),
-      fetch("/database/quotes.json").then(r => r.json())
+      fetch("/api/habits?user_id=1")
+        .then(async r => {
+          if (!r.ok) throw new Error("Failed to fetch habits");
+          const d = await r.json();
+          if (d && d.habits) return d.habits;
+          throw new Error("Malformed habits");
+        }),
+      fetch("/api/quote")
+        .then(async r => {
+          if (!r.ok) throw new Error("Failed to fetch quote");
+          const d = await r.json();
+          if (d && d.quote) return d.quote;
+          throw new Error("Malformed quote");
+        }),
     ])
-      .then(([habitsData, quotesData]) => {
+      .then(([habitsData, quoteObj]) => {
         if (ignore) return;
-        // Pick first 3 habits for the homepage
-        setHabits((habitsData && habitsData.slice(0, 3)) || []);
-        setQuotes(quotesData || []);
-        let dayIdx = (new Date().getDate() + new Date().getMonth()) % ((quotesData && quotesData.length) || 1);
-        setQuoteOfDay(quotesData && quotesData[dayIdx]);
+        // Pick first 3 habits to display on homepage (simulate demo)
+        setHabits(Array.isArray(habitsData) ? habitsData.slice(0, 3) : []);
+        setQuotes(quoteObj ? [quoteObj] : []);
+        setQuoteOfDay(quoteObj || null);
         setLoading(false);
         setError(null);
       })
       .catch((err) => {
         if (ignore) return;
-        setError("Failed to load demo data. " + (err.message || ""));
+        setError("Failed to load data from backend. " + (err.message || ""));
         setLoading(false);
       });
     return () => {
