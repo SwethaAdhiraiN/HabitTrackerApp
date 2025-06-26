@@ -1,6 +1,7 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom";
 import Register from "./Register";
+import Login from "./Login";
 import "./styles/theme.css";
 
 /**
@@ -387,12 +388,13 @@ function HomePage() {
 }
 
 function App() {
-  // Provide routing structure: homepage and register
+  // Provide routing structure: homepage, register, login
   return (
     <Router>
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/login" element={<Login />} />
         {/* Add future routes here */}
       </Routes>
     </Router>
