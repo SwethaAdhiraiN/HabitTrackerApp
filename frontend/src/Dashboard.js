@@ -10,25 +10,52 @@ import styles from "./styles/Dashboard.module.css";
  */
 
 function Dashboard() {
-  // Note: This implementation fetches data for the currently "logged-in" user.
-  // Realworld: Replace logic with session/user context if available
+  // State variables/hooks must always be at the top-level and unconditional
   const [user, setUser] = useState(null);
   const [habits, setHabits] = useState(null);
   const [progress, setProgress] = useState(null); // Most recent (today's or last) progress snapshot
   const [quote, setQuote] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  // Emulate getting userId from auth/session for now ("first" user in DB)
-  // In real app, this should be lifted up to context after login/register!
   const [userId, setUserId] = useState(null);
-
-  // Fetch all data on mount
+  // These will always be called (useMemo)
+  const todayObj = useMemo(() => new Date(), []);
+  const weekDays = useMemo(() => {
+    // Construct this week: Sun..Sat, highlight today
+    const days = [];
+    const todayIdx = todayObj.getDay();
+    for (let i = 0; i < 7; ++i) {
+      let d = new Date(todayObj);
+      d.setDate(todayObj.getDate() - todayIdx + i);
+      days.push({
+        label: d.toLocaleString("en-US", { weekday: "short" }),
+        date: d.getDate(),
+        isToday: i === todayIdx,
+      });
+    }
+    return days;
+  }, [todayObj]);
+  const sidebarMetrics = useMemo(() => {
+    let totalHabits = habits ? habits.length : 0;
+    let completedToday = 0;
+    let longestStreak = 0;
+    if (habits && progress) {
+      // completedToday: count of habits checked true in progress.habit_checkmarks
+      completedToday = Object.values(progress.habit_checkmarks || {}).filter(Boolean).length;
+      // Longest streak: max habit.streak from all
+      longestStreak = habits.reduce((mx, h) => Math.max(mx, h.streak || 0), 0);
+    }
+    return [
+      { label: "Total Habits", value: totalHabits },
+      { label: "Completed Today", value: completedToday },
+      { label: "Longest Streak", value: longestStreak },
+    ];
+  }, [habits, progress]);
+  // Always declare hooks (useEffect) unconditionally (no conditionals, loops, or early returns)
   useEffect(() => {
     let ignore = false;
     setLoading(true);
     setError(null);
-
     // Step 1: Find userId (simulate auth for now, fallback to first user in db)
     fetch(`/api/user/1`)
       .then(async response => {
@@ -40,7 +67,6 @@ function Dashboard() {
         return resJson.user.id;
       })
       .then((uid) =>
-        // Parallel: fetch habits, progress, quote
         Promise.all([
           fetch(`/api/habits?user_id=${uid}`).then(r => r.json()),
           fetch(`/api/progress?user_id=${uid}`).then(r => r.json()),
@@ -52,7 +78,6 @@ function Dashboard() {
         if (!habitsRes.success) throw new Error("Habits fetch failed.");
         setHabits(habitsRes.habits || []);
         if (!progressRes.success) throw new Error("Progress fetch failed.");
-        // Pick the latest progress snapshot (or today's if present)
         let today = new Date().toISOString().slice(0, 10);
         let todays = (progressRes.progress || []).find(p => p.date === today);
         let last = (progressRes.progress || [])
@@ -73,8 +98,7 @@ function Dashboard() {
       ignore = true;
     };
   }, []);
-
-  // Handle overall loading/error states
+  // At this point, all hooks are above. Now use conditional logic for rendering.
   if (loading) {
     return (
       <div className={styles.dashboardBg} style={{ display: "flex", height: "100vh", alignItems: "center", justifyContent: "center" }}>
