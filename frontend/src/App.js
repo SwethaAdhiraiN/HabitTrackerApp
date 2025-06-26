@@ -1,17 +1,38 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React from "react";
 import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom";
 import Register from "./Register";
 import Login from "./Login";
+import Dashboard from "./Dashboard";
 import "./styles/theme.css";
 
 /**
  * PUBLIC_INTERFACE
- * HabitTrackerApp Homepage: matches pastel/gradient design from visual guide.
- * - Pastel vertical gradient background (lavender → pink).
- * - Centered stack of soft rounded cards (Intro, Stats, Habits).
- * - Prominent accent "Register" button (top-right).
- * - All color, type, radius, and spacing per extracted style guidance.
+ * HabitTrackerApp Static Homepage (mobile reference):
+ * - No dynamic data or API calls.
+ * - Pastel gradient bg, stacked rounded cards, friendly layout per reference.
+ * - Replaces "success rate" stat with a motivating quote.
+ * - "Habits" section is now "Sample Habits", with 3 demo habits, each with icons and checkmarks, matching visuals.
  */
+
+const sampleHabits = [
+  {
+    name: "Drink Water",
+    icon: "water_drop",
+    progress: [true, true, false],
+  },
+  {
+    name: "Read Book",
+    icon: "book",
+    progress: [true, false, false],
+  },
+  {
+    name: "Meditate",
+    icon: "lotus",
+    progress: [false, true, true],
+  },
+];
+
+// Simple pastel icon SVGs mapped by key
 const habitIcons = {
   water_drop: (
     <span style={{
@@ -43,17 +64,6 @@ const habitIcons = {
       </svg>
     </span>
   ),
-  heartbeat: (
-    <span style={{
-      display: "flex", alignItems: "center", justifyContent: "center",
-      width: 36, height: 36, borderRadius: 10, background: "var(--ht-surface)"
-    }}>
-      <svg width="22" height="22" viewBox="0 0 20 20" fill="#F7A1B2">
-        <path d="M10 17s-5.7-2.8-7.2-6C1 7.7 3.5 5 6.1 5c1.3 0 2.5.7 3.2 1.8C10.4 5.7 11.6 5 12.9 5c2.6 0 5.1 2.7 3.3 6C15.7 14.2 10 17 10 17z"/>
-      </svg>
-    </span>
-  ),
-  // fallback:
   default: (
     <span style={{
       display: "flex", alignItems: "center", justifyContent: "center",
@@ -64,61 +74,60 @@ const habitIcons = {
   ),
 };
 
+function MotivationalQuote() {
+  // Visually-replacing the previous stats "Success Rate" card with a static quote (per instructions)
+  return (
+    <section
+      style={{
+        width: "100%",
+        background: "rgba(255,255,255,0.98)",
+        borderRadius: 18,
+        boxShadow: "0 2px 12px rgba(123,97,255,0.10)",
+        padding: "28px 18px 26px 18px",
+        marginBottom: 24,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <div
+        style={{
+          fontSize: "1.29rem",
+          color: "var(--ht-primary-text)",
+          fontWeight: 700,
+          textAlign: "center",
+          lineHeight: 1.36,
+          letterSpacing: 0.05,
+          marginBottom: 8,
+          maxWidth: 280,
+          fontFamily: '"Helvetica Neue", Arial, sans-serif',
+          textShadow: "0 3px 14px rgba(104,127,229,0.07)",
+        }}
+      >
+        "Start small. Be consistent. Good habits shape your future!"
+      </div>
+      <div
+        style={{
+          fontSize: "1.07rem",
+          color: "var(--ht-primary)",
+          fontWeight: 600,
+          marginTop: 3,
+          textAlign: "center",
+          letterSpacing: 0.01,
+        }}
+      >
+        — HabitTrackerApp
+      </div>
+    </section>
+  );
+}
+
 function HomePage() {
   const navigate = useNavigate();
-  // --- Async mock data state ---
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
-  // Demo: show first user's habits
-  const [habits, setHabits] = useState([]);
-  const [quotes, setQuotes] = useState([]);
-  const [quoteOfDay, setQuoteOfDay] = useState(null);
-
-  useEffect(() => {
-    let ignore = false;
-    setLoading(true);
-    // We'll use user_id=1 for demo habit fetch; quotes from /api/quote (returns one)
-    // First, fetch /api/habits?user_id=1 and /api/quote for quote of the day
-    Promise.all([
-      fetch("/api/habits?user_id=1")
-        .then(async r => {
-          if (!r.ok) throw new Error("Failed to fetch habits");
-          const d = await r.json();
-          if (d && d.habits) return d.habits;
-          throw new Error("Malformed habits");
-        }),
-      fetch("/api/quote")
-        .then(async r => {
-          if (!r.ok) throw new Error("Failed to fetch quote");
-          const d = await r.json();
-          if (d && d.quote) return d.quote;
-          throw new Error("Malformed quote");
-        }),
-    ])
-      .then(([habitsData, quoteObj]) => {
-        if (ignore) return;
-        // Pick first 3 habits to display on homepage (simulate demo)
-        setHabits(Array.isArray(habitsData) ? habitsData.slice(0, 3) : []);
-        setQuotes(quoteObj ? [quoteObj] : []);
-        setQuoteOfDay(quoteObj || null);
-        setLoading(false);
-        setError(null);
-      })
-      .catch((err) => {
-        if (ignore) return;
-        setError("Failed to load data from backend. " + (err.message || ""));
-        setLoading(false);
-      });
-    return () => {
-      ignore = true;
-    };
-  }, []);
-
-  // Compose/render homepage
   return (
     <div
-      // Gradient pastel background (lavender → pink), vertical, as per style guide.
       style={{
         minHeight: "100vh",
         width: "100vw",
@@ -131,7 +140,7 @@ function HomePage() {
         boxSizing: "border-box",
       }}
     >
-      {/* Header Section with Register button */}
+      {/* Header nav with Register */}
       <nav
         style={{
           width: "100%",
@@ -144,7 +153,6 @@ function HomePage() {
         }}
       >
         <button
-          // Prominent Register button as per design
           style={{
             background: "var(--ht-primary)",
             color: "white",
@@ -189,7 +197,6 @@ function HomePage() {
             gap: 8,
           }}
         >
-          {/* Hero header text, badge, subtitle, calendar icon */}
           <div style={{ display: "flex", alignItems: "start" }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <h1
@@ -197,7 +204,7 @@ function HomePage() {
                   fontSize: "2rem",
                   fontWeight: 700,
                   margin: 0,
-                  color: "#3B1877", // deep purple as per design
+                  color: "#3B1877",
                   fontFamily: '"Helvetica Neue", Arial, sans-serif',
                   letterSpacing: 0,
                 }}
@@ -216,7 +223,6 @@ function HomePage() {
                 Build better habits easily
               </p>
             </div>
-            {/* Calendar Icon illustration in pastel box (matches reference) */}
             <div
               style={{
                 width: 48,
@@ -230,17 +236,15 @@ function HomePage() {
                 marginLeft: 12,
               }}
             >
-              {/* Calendar SVG illustration */}
+              {/* Calendar SVG */}
               <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
                 <rect x="4" y="7.5" width="22" height="16" rx="4" fill="#EBD6FB"/>
                 <rect x="7.5" y="11" width="15" height="10" rx="3" fill="#fff"/>
                 <rect x="10" y="14" width="3.5" height="3.5" rx="1.2" fill="#687FE5"/>
-                {/* Green check on calendar */}
                 <path d="M14 17 l2 2.2 3-3" stroke="#47DB7F" strokeWidth="1.7" fill="none" strokeLinecap="round"/>
               </svg>
             </div>
           </div>
-          {/* Above: badge/21 days */}
           <div
             style={{
               marginTop: 18,
@@ -278,61 +282,9 @@ function HomePage() {
         </section>
 
         {/* 2. Motivational Quote Card */}
-        <section
-          style={{
-            width: "100%",
-            background: "rgba(255,255,255,0.98)",
-            borderRadius: 18,
-            boxShadow: "0 2px 12px rgba(123,97,255,0.10)",
-            padding: "28px 18px 26px 18px",
-            marginBottom: 24,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          {loading ? (
-            <div style={{color: "var(--ht-primary)", fontWeight: 700, fontSize: "1.15em"}}>Loading…</div>
-          ) : error ? (
-            <div style={{color: "var(--ht-error)", fontWeight: 600, fontSize: "1.1em"}}>{error}</div>
-          ) : quoteOfDay ? (
-            <>
-            <div
-              style={{
-                fontSize: "1.27rem",
-                color: "var(--ht-primary-text)",
-                fontWeight: 700,
-                textAlign: "center",
-                lineHeight: 1.35,
-                letterSpacing: 0.1,
-                marginBottom: 9,
-                maxWidth: 280,
-                fontFamily: '"Helvetica Neue", Arial, sans-serif',
-                textShadow: "0 3px 14px rgba(104,127,229,0.07)",
-              }}
-            >
-              "{quoteOfDay.text}"
-            </div>
-            <div
-              style={{
-                fontSize: "1.02rem",
-                color: "var(--ht-primary)",
-                fontWeight: 600,
-                marginTop: 2,
-                textAlign: "center",
-                letterSpacing: 0.02,
-              }}
-            >
-              {quoteOfDay.author}
-            </div>
-            </>
-          ) : (
-            <div style={{color: "var(--ht-secondary-text)"}}>No quote found.</div>
-          )}
-        </section>
+        <MotivationalQuote />
 
-        {/* 3. Habits List Card */}
+        {/* 3. Habits List Card (now "Sample Habits") */}
         <section
           style={{
             width: "100%",
@@ -355,19 +307,13 @@ function HomePage() {
             Sample Habits
           </div>
           <div>
-            {loading ? (
-              <div style={{color: "var(--ht-primary)", fontWeight: 700}}>Loading…</div>
-            ) : error ? (
-              <div style={{color: "var(--ht-error)", fontWeight: 600}}>{error}</div>
-            ) : habits.length === 0 ? (
-              <div style={{color: "var(--ht-secondary-text)"}}>No habits found (demo).</div>
-            ) : habits.map((habit, i) => (
+            {sampleHabits.map((habit, i) => (
               <div
-                key={habit.id || i}
+                key={habit.name}
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  marginBottom: i < habits.length - 1 ? 13 : 0,
+                  marginBottom: i < sampleHabits.length - 1 ? 13 : 0,
                   padding: "4px 0",
                 }}
               >
@@ -386,7 +332,7 @@ function HomePage() {
                   {habit.name}
                 </div>
                 <div style={{ display: "flex", gap: 5, marginLeft: 8 }}>
-                  {(habit.days || [false, false, false]).slice(0, 3).map((completed, idx) =>
+                  {habit.progress.map((completed, idx) =>
                     completed ? (
                       <span
                         key={idx}
@@ -434,10 +380,8 @@ function HomePage() {
   );
 }
 
-import Dashboard from "./Dashboard";
-
 function App() {
-  // Provide routing structure: homepage, register, login, dashboard
+  // Routing for static homepage (+ register, login, dashboard routes)
   return (
     <Router>
       <Routes>
@@ -445,7 +389,6 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard />} />
-        {/* Add future routes here */}
       </Routes>
     </Router>
   );
