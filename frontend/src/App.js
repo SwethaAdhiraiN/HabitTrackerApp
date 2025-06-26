@@ -387,14 +387,17 @@ function HomePage() {
   );
 }
 
+import Dashboard from "./Dashboard";
+
 function App() {
-  // Provide routing structure: homepage, register, login
+  // Provide routing structure: homepage, register, login, dashboard
   return (
     <Router>
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/dashboard" element={<Dashboard />} />
         {/* Add future routes here */}
       </Routes>
     </Router>
