@@ -35,8 +35,8 @@ function Register() {
     e.preventDefault();
     setTouched({ email: true, password: true });
     if (validateEmail(email) && validatePassword(password)) {
-      // Make API call to /api/register but guard against network/parse errors and wrong content-type
-      fetch("http://localhost:5000/api/register", {
+      // Make API call to /api/register using relative path so frontend proxy or CORS works correctly
+      fetch("/api/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
