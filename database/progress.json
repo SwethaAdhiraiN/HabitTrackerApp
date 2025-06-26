@@ -1,0 +1,20 @@
+[
+  {
+    "user_id": 1,
+    "date": "2024-06-27",
+    "habit_checkmarks": {
+      "1": true,
+      "2": false,
+      "3": true,
+      "4": true
+    }
+  },
+  {
+    "user_id": 2,
+    "date": "2024-06-27",
+    "habit_checkmarks": {
+      "5": true,
+      "6": true
+    }
+  }
+]

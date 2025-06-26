@@ -1,0 +1,16 @@
+[
+  {
+    "id": 1,
+    "name": "Adhirai",
+    "email": "adhirai@email.com",
+    "password": "password123",
+    "avatar": "https://ui-avatars.com/api/?name=Adhirai"
+  },
+  {
+    "id": 2,
+    "name": "Morgan",
+    "email": "morgan@email.com",
+    "password": "testpass456",
+    "avatar": "https://ui-avatars.com/api/?name=Morgan"
+  }
+]
