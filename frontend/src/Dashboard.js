@@ -4,6 +4,7 @@ import UserHeader from "./UserHeader";
 import ProgressSnapshotWidget from "./ProgressSnapshotWidget";
 import MiniCalendarWidget from "./MiniCalendarWidget";
 import QuoteOfTheDayWidget from "./QuoteOfTheDayWidget";
+import { useNavigate } from "react-router-dom";
 
 /**
  * Fetches and returns the current and longest streak info for a habit.
@@ -136,6 +137,7 @@ function HabitCard({ habit, streak, longest, streakLoading, streakError, tracker
  * - Code is modular: tracker, streak icon, card, and fetch logic are split for further enhancements.
  * - Horizontal habit cards scroll, 7-day check icons, mark-done button per habit.
  * - Uses pastel palette and dashboard CSS module.
+ * - NOW: Displays navigation shortcut buttons for dashboard subpages, styled to match pastel theme.
  */
 function Dashboard() {
   const [user, setUser] = useState(null); // {id, ...}
@@ -144,6 +146,54 @@ function Dashboard() {
   const [errMsg, setErrMsg] = useState("");
   const [trackLoading, setTrackLoading] = useState({});
   const [justTracked, setJustTracked] = useState({}); // {habitId: true}
+  const navigate = useNavigate();
+
+  // Button config: path, label, icon SVG, bg color for pastel
+  const navShortcuts = [
+    {
+      path: "/dashboard/new-habit",
+      label: "Create New Habit",
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 20 20" fill="#A2D9C2"><rect x="8.3" y="3" width="3.4" height="14" rx="1.2"/><rect x="3" y="8.3" width="14" height="3.4" rx="1.2"/></svg>
+      ),
+      bg: "#E7F9F1"
+    },
+    {
+      path: "/dashboard/habits",
+      label: "View Habits List",
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 20 20" fill="#8DB8E7"><rect x="3" y="5" width="14" height="3" rx="1.3"/><rect x="3" y="9" width="14" height="3" rx="1.3"/><rect x="3" y="13" width="14" height="3" rx="1.3"/></svg>
+      ),
+      bg: "#EFF6FD"
+    },
+    {
+      path: "/dashboard/progress",
+      label: "Track Progress",
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 20 20" fill="#F3B27B"><rect x="4" y="12" width="3" height="4" rx="1.2"/><rect x="8.5" y="8" width="3" height="8" rx="1.2"/><rect x="13" y="5" width="3" height="11" rx="1.2"/></svg>
+      ),
+      bg: "#FCF3EA"
+    },
+    {
+      path: "/dashboard/profile",
+      label: "Profile",
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 20 20" fill="#F7A1B2"><circle cx="10" cy="7.5" r="3"/><rect x="5" y="12" width="10" height="5" rx="2.5"/></svg>
+      ),
+      bg: "#FAEFF1"
+    },
+    {
+      path: "/dashboard/settings",
+      label: "Settings",
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 20 20" fill="#C48DDC">
+          <circle cx="10" cy="10" r="3.5"/>
+          <path d="M10 2v2M10 16v2M18 10h-2M4 10H2M15.7 4.3l-1.4 1.4M5.7 14.3l-1.4 1.4M15.7 15.7l-1.4-1.4M5.7 5.7l-1.4-1.4" stroke="#C48DDC" strokeWidth="1.2" fill="none"/>
+        </svg>
+      ),
+      bg: "#F7EBFA"
+    },
+  ];
 
   // Get user from storage (matches UserHeader logic)
   useEffect(() => {
@@ -416,6 +466,50 @@ function Dashboard() {
     <div className={styles.dashboardBg}>
       {/* User Header Section (handles user info, welcome, date, logout) */}
       <UserHeader onLogout={() => window.location.reload()} />
+
+      {/* Navigation Shortcuts Row */}
+      <div
+        style={{
+          display: "flex",
+          gap: 16,
+          marginBottom: 18,
+          marginTop: 6,
+          justifyContent: "center",
+          flexWrap: "wrap",
+        }}
+      >
+        {navShortcuts.map((btn) => (
+          <button
+            key={btn.label}
+            onClick={() => navigate(btn.path)}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "none",
+              borderRadius: 15,
+              padding: "10px 13px 8px",
+              background: btn.bg,
+              color: "#49377A",
+              minWidth: 70,
+              boxShadow: "0 1.5px 6px rgba(123,97,255,0.09)",
+              cursor: "pointer",
+              fontFamily: '"Helvetica Neue", Arial, sans-serif',
+              transition: "background 0.18s, box-shadow 0.18s",
+              fontWeight: 600,
+              fontSize: "0.93rem",
+              outline: "none",
+              marginBottom: 4,
+            }}
+            tabIndex={0}
+            aria-label={btn.label}
+          >
+            <div style={{ marginBottom: 4 }}>{btn.icon}</div>
+            <span style={{ fontSize: "0.94rem", lineHeight: 1.1, whiteSpace: "nowrap" }}>{btn.label}</span>
+          </button>
+        ))}
+      </div>
 
       {/* Main Flex Content */}
       <main className={styles.mainWrapper}>

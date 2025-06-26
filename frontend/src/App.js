@@ -5,6 +5,15 @@ import Login from "./Login";
 import Dashboard from "./Dashboard";
 import "./styles/theme.css";
 
+// Import placeholder pages (to be created if missing)
+import { 
+  NewHabit, 
+  HabitsList, 
+  TrackProgress, 
+  Profile, 
+  Settings 
+} from "./DashboardRoutesPlaceholders";
+
 /**
  * PUBLIC_INTERFACE
  * HabitTrackerApp Static Homepage (mobile reference):
@@ -381,7 +390,7 @@ function HomePage() {
 }
 
 function App() {
-  // Routing for static homepage (+ register, login, dashboard routes)
+  // Routing for static homepage (+ register, login, dashboard routes and dashboard children)
   return (
     <Router>
       <Routes>
@@ -389,6 +398,12 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        {/* Dashboard subroutes as placeholders if not implemented */}
+        <Route path="/dashboard/new-habit" element={<NewHabit />} />
+        <Route path="/dashboard/habits" element={<HabitsList />} />
+        <Route path="/dashboard/progress" element={<TrackProgress />} />
+        <Route path="/dashboard/profile" element={<Profile />} />
+        <Route path="/dashboard/settings" element={<Settings />} />
       </Routes>
     </Router>
   );
