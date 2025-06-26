@@ -3,6 +3,7 @@ import styles from "./styles/Dashboard.module.css";
 import UserHeader from "./UserHeader";
 import ProgressSnapshotWidget from "./ProgressSnapshotWidget";
 import MiniCalendarWidget from "./MiniCalendarWidget";
+import QuoteOfTheDayWidget from "./QuoteOfTheDayWidget";
 
 /**
  * Fetches and returns the current and longest streak info for a habit.
@@ -73,7 +74,7 @@ function HabitCard({ habit, streak, longest, streakLoading, streakError, tracker
         {getIconForHabit(habit.icon)}
         {/* Name */}
         <span className={styles.habitName}>
-          {habit.name || "—"}
+          {habit.name || "\u2014"}
         </span>
         {/* Streak visual */}
         <span style={{ position: "relative", display: "flex", alignItems: "center", marginLeft: 8 }}>
@@ -105,7 +106,8 @@ function HabitCard({ habit, streak, longest, streakLoading, streakError, tracker
             fontSize: "0.89em",
             marginLeft: 6,
             opacity: 0.72
-          }}>🔥<span style={{ marginLeft: 2 }}>{longest}</span></span>
+          }}>
+            🔥<span style={{ marginLeft: 2 }}>{longest}</span></span>
         )}
       </div>
       {/* 7 day checkmark tracker + optional annotation */}
@@ -497,18 +499,8 @@ function Dashboard() {
         <aside className={styles.sidebar}>
           {/* Progress Snapshot widget card (implements progress snapshot) */}
           <ProgressSnapshotWidget userId={user?.id} />
-          {/* Quote of the Day */}
-          <div className={styles.widget} aria-label="Quote of the Day">
-            <div className={styles.widgetLabel}>Quote of the Day</div>
-            <div className={styles.quoteText}>
-              <span style={{ color: "var(--ht-primary)", fontStyle: "italic" }}>
-                {"Stay motivated! Your quote will appear here."}
-              </span>
-            </div>
-            <div className={styles.quoteAuthor} style={{ marginTop: 4 }}>
-              — HabitTrackerApp
-            </div>
-          </div>
+          {/* Quote of the Day Widget */}
+          <QuoteOfTheDayWidget />
           {/* Mini Calendar */}
           <MiniCalendarWidget userId={user?.id} />
         </aside>
