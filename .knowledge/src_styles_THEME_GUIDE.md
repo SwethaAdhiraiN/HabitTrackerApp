@@ -1,0 +1,1 @@
+{"is_source_file": true, "file_id": 7, "git_revision": "", "state": 1, "description": "", "external_files": [], "external_methods": [], "published": [], "classes": [], "methods": [], "calls": [], "search-terms": [], "hash": "55c087867b41b92ba2cd52833f234c9d", "format-version": 4, "code-base-name": "default", "filename": "src/styles/THEME_GUIDE.md", "knowledge_revision": 14}
