@@ -50,13 +50,41 @@ function Login() {
         })
       })
         .then(async (resp) => {
-          if (resp.ok) {
-            setSubmitted(true);
-            // TODO: store auth state, redirect to dashboard, etc.
+          const contentType = resp.headers.get("content-type");
+          if (resp.ok && contentType && contentType.includes("application/json")) {
+            try {
+              const result = await resp.json();
+              // Only redirect if backend confirms login is successful and user/token is present
+              if (result && result.success && result.user && result.user.id) {
+                setSubmitted(true);
+                setTimeout(() => {
+                  navigate("/dashboard");
+                }, 600); // Give a slight visual feedback (optional)
+                return;
+              }
+              // If result.success is false, treat as error: show alert
+              alert(
+                "Login failed: " +
+                  (result && result.message ? result.message : "Invalid login response.")
+              );
+              setSubmitted(false);
+            } catch {
+              alert("Login failed: Invalid response from server.");
+              setSubmitted(false);
+            }
           } else {
             setSubmitted(false);
-            const result = await resp.json();
-            alert((result && result.message) || "Login failed");
+            // Try to extract an error message if possible
+            let msg = "Login failed: Unable to connect or invalid email/password.";
+            try {
+              if (contentType && contentType.includes("application/json")) {
+                const result = await resp.json();
+                if (result && result.message) {
+                  msg = "Login failed: " + result.message;
+                }
+              }
+            } catch { }
+            alert(msg);
           }
         })
         .catch((err) => {
