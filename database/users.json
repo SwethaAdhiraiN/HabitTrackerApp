@@ -38,5 +38,13 @@
     "password": "swetha",
     "avatar": "https://ui-avatars.com/api/?name=swetha",
     "join_date": "2025-06-26"
+  },
+  {
+    "id": 6,
+    "name": "adhirai",
+    "email": "adhirai@gmail.com",
+    "password": "adhirai",
+    "avatar": "https://ui-avatars.com/api/?name=adhirai",
+    "join_date": "2025-06-27"
   }
 ]
