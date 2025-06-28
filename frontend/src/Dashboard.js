@@ -410,12 +410,59 @@ function Dashboard() {
             style={{marginBottom: 0, background: "var(--ht-surface,#EBD6FB)"}}>
             {/* CalendarWithEmotions */}
             <Suspense fallback={<div>Loading calendar...</div>}>
-              <CalendarWithEmotions />
+              {/* Add emotion state and change handler for the calendar */}
+              <EmotionCalendarWrapper />
             </Suspense>
           </DashboardCard>
         </aside>
       </div>
     </div>
+  );
+}
+
+// PUBLIC_INTERFACE
+function EmotionCalendarWrapper() {
+  // This state structure: { "YYYY-MM-DD": "emoji" }
+  const [emotionsPerDay, setEmotionsPerDay] = useState(() => {
+    // Try localStorage for persistence, or start empty
+    try {
+      const data = localStorage.getItem("habit_emotions_per_day");
+      return data ? JSON.parse(data) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  // Handler for changing emotion
+  // PUBLIC_INTERFACE
+  function onEmotionChange(dateStr, emoji) {
+    setEmotionsPerDay((prev) => {
+      const updated = { ...prev };
+      if (emoji) {
+        updated[dateStr] = emoji;
+      } else {
+        delete updated[dateStr];
+      }
+      // Persist
+      try {
+        localStorage.setItem("habit_emotions_per_day", JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  }
+
+  // CalendarWithEmotions expects current month/year
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
+
+  return (
+    <CalendarWithEmotions
+      emotionsPerDay={emotionsPerDay}
+      onEmotionChange={onEmotionChange}
+      month={month}
+      year={year}
+    />
   );
 }
 
