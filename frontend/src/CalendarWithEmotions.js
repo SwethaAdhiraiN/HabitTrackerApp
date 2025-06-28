@@ -402,7 +402,9 @@ function CalendarWithEmotions() {
                   isToday
                     ? (e) => {
                         e.preventDefault();
-                        setEmojiPickerOpen(open => !open);
+                        e.stopPropagation();
+                        // Always open the emoji picker, never toggle or close on re-click
+                        setEmojiPickerOpen(true);
                       }
                     : undefined
                 }
