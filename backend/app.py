@@ -10,6 +10,7 @@ USERS_FILE = os.path.join(DATABASE_DIR, "users.json")
 HABITS_FILE = os.path.join(DATABASE_DIR, "habits.json")
 PROGRESS_FILE = os.path.join(DATABASE_DIR, "progress.json")
 QUOTES_FILE = os.path.join(DATABASE_DIR, "quotes.json")
+EMOTIONS_FILE = os.path.join(DATABASE_DIR, "emotions.json")
 
 # ---- HELPER FUNCTIONS ----
 def read_json(file_path, default=None):
@@ -39,6 +40,20 @@ def basic_email_format(email):
 def today_date():
     """Return YYYY-MM-DD string for today."""
     return datetime.date.today().isoformat()
+
+def read_emotions():
+    """Read emotion mapping from emotions.json. Returns dict {user_id: {date: emotion}}."""
+    try:
+        with open(EMOTIONS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+def write_emotions(data):
+    """Persist emotion mapping to file."""
+    with open(EMOTIONS_FILE, "w", encoding="utf-8") as f:
+        json.dump(data or {}, f, indent=2, ensure_ascii=False)
 
 # PUBLIC_INTERFACE
 def create_app():
@@ -287,6 +302,57 @@ def create_app():
         day_idx = (datetime.date.today().day + datetime.date.today().month) % len(quotes)
         q = quotes[day_idx]
         return jsonify({"success": True, "quote": q})
+
+    # ---- EMOTION (PER-DAY, PER-USER, EMOJI) TRACKING ----
+    # PUBLIC_INTERFACE
+    @app.route("/api/emotion", methods=["GET"])
+    def get_emotions():
+        """
+        Get all emotion data for a user (and optionally a date).
+        Query params:
+            user_id (required, int) - user ID.
+            date (optional, YYYY-MM-DD) - to filter a single date.
+        Returns: {success: bool, emotions: {YYYY-MM-DD:emoji,...}} or for one date: {date:..., emotion:...}
+        """
+        user_id = request.args.get("user_id", type=int)
+        single_date = request.args.get("date", type=str)
+        if user_id is None:
+            return jsonify({"success": False, "message": "user_id query param required"}), 400
+        emotions_map = read_emotions()
+        user_emos = emotions_map.get(str(user_id), {})  # string keys
+        if single_date:
+            emo = user_emos.get(single_date)
+            return jsonify({"success": True, "date": single_date, "emotion": emo})
+        return jsonify({"success": True, "emotions": user_emos})
+
+    # PUBLIC_INTERFACE
+    @app.route("/api/emotion", methods=["POST"])
+    def post_emotion():
+        """
+        Set or update a user's emotion for a given date.
+        Expects JSON: { user_id: int, date: "YYYY-MM-DD", emotion: <str:emoji> }
+        Returns: {success: bool, date, emotion}
+        """
+        data = request.get_json(force=True)
+        if not all(k in data for k in ["user_id", "date", "emotion"]):
+            return jsonify({"success": False, "message": "Missing required fields: user_id, date, emotion"}), 400
+        user_id = str(data["user_id"])
+        date = data["date"]
+        emoji = data["emotion"]
+        users = read_json(USERS_FILE, [])
+        if not any(str(u.get("id")) == user_id for u in users):
+            return jsonify({"success": False, "message": "User not found"}), 404
+        # Date validation (YYYY-MM-DD)
+        try:
+            datetime.datetime.strptime(date, "%Y-%m-%d")
+        except Exception:
+            return jsonify({"success": False, "message": "Invalid date format; use YYYY-MM-DD"}), 400
+        emotions_map = read_emotions()
+        if user_id not in emotions_map or not isinstance(emotions_map.get(user_id), dict):
+            emotions_map[user_id] = {}
+        emotions_map[user_id][date] = emoji
+        write_emotions(emotions_map)
+        return jsonify({"success": True, "user_id": int(user_id), "date": date, "emotion": emoji})
 
     # ---- ROOT ROUTE ----
     # PUBLIC_INTERFACE

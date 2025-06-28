@@ -395,9 +395,27 @@ function Dashboard() {
             loading={false}
             error={false}
             minHeight={110}
-            style={{marginBottom: 0}}>
+            style={{marginBottom: 15}}>
             {/* MiniCalendarWidget already handles async + states */}
             <MiniCalendarWidget userId={userId} />
+          </DashboardCard>
+          {/* New: Full pastel emotion calendar with emoji modal */}
+          <DashboardCard
+            loading={false}
+            error={false}
+            minHeight={170}
+            style={{marginBottom: 0, background: "var(--ht-surface,#EBD6FB)"}}>
+            {/* CalendarWithEmotions */}
+            {/*
+              Responsive, matches sidebar. This card appears below Quote/calendar widgets.
+              Appears at >1000px desktop as part of sidebar, below calendar/quote, and at <1000px as stacked.
+            */}
+            <React.Suspense fallback={<div>Loading calendar...</div>}>
+              {typeof window !== "undefined" && (
+                require("./CalendarWithEmotions").default ? 
+                  < (require("./CalendarWithEmotions").default) /> : null
+              )}
+            </React.Suspense>
           </DashboardCard>
         </aside>
       </div>
