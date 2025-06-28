@@ -388,10 +388,15 @@ function Dashboard() {
           <DashboardCard
             loading={false}
             error={false}
-            minHeight={90}
-            style={{marginBottom: 20}}
+            minHeight={110}
+            style={{
+              marginBottom: 20,
+              background: "var(--ht-surface,#F7F6FD)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
           >
-            {/* QuoteOfTheDayWidget already handles async + states */}
             <QuoteOfTheDayWidget />
           </DashboardCard>
 
