@@ -578,20 +578,7 @@ function CalendarWithEmotions() {
                     {emoji}
                   </span>
                 )}
-                {/* Visual lock for non-today */}
-                <span
-                  style={{
-                    position: "absolute",
-                    right: 4,
-                    bottom: 3,
-                    fontSize: "1em",
-                    color: "#E7D7F2"
-                  }}
-                  aria-hidden="true"
-                  title="Locked"
-                >
-                  🔒
-                </span>
+                {/* Lock icon for non-today REMOVED as per task requirements */}
               </div>
             );
           }),
