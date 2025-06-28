@@ -1,345 +1,407 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
 import UserHeader from "./UserHeader";
 import ProgressSnapshotWidget from "./ProgressSnapshotWidget";
 import MiniCalendarWidget from "./MiniCalendarWidget";
-import CalendarWithEmotions from "./CalendarWithEmotions";
 import QuoteOfTheDayWidget from "./QuoteOfTheDayWidget";
 import "./styles/Dashboard.module.css";
 
-/**
- * Helper to get current user from storage, null if absent.
- */
-function getSavedUser() {
-  try {
-    const stored = window.sessionStorage.getItem("habit_user") || window.localStorage.getItem("habit_user");
-    return stored ? JSON.parse(stored) : null;
-  } catch {
-    return null;
-  }
-}
-
-// Utilities for API calls
-const API_BASE = "/api";
-
-/**
- * fetchWithAuth: Simple fetch wrapper (optionally sends JSON).
- * No server session/cookie/JWT is used; must pass user_id where needed.
- */
-async function fetchWithAuth(url, options = {}) {
-  return fetch(url, {
-    ...options,
-    headers: {
-      ...(options.headers || {}),
-      "Content-Type": "application/json",
-    },
-  });
-}
-
-// ----------------- Dashboard Main -----------------
-
-/**
- * PUBLIC_INTERFACE
- * Dashboard: Improved authentication handling for HabitTrackerApp.
- * Reads authentication from storage, passes user_id in all API requests,
- * and redirects to /login if not authenticated.
- */
-function Dashboard() {
-  const navigate = useNavigate();
-
-  // State: User, habits, progress, quote, emotions, calendar
-  const [user, setUser] = useState(null);
-  const [habitsToday, setHabitsToday] = useState([]);
-  const [progress, setProgress] = useState(null);
-  const [quote, setQuote] = useState(null);
-  const [emotionData, setEmotionData] = useState([]);
-  const [calendarReflections, setCalendarReflections] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [habitsLoading, setHabitsLoading] = useState(false);
-
-  // Fetch all data on first load
-  const fetchDashboardData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      // 1. Load user from storage
-      let userObj = getSavedUser();
-      if (!userObj || !userObj.id) {
-        setUser(null);
-        setLoading(false);
-        navigate("/login");
-        return;
-      }
-      setUser(userObj);
-
-      // 2. Fetch user's habits (use user_id as query param)
-      const habitsResp = await fetchWithAuth(`${API_BASE}/habits?user_id=${userObj.id}`);
-      const habitsResult = await habitsResp.json();
-      if (!habitsResult.success) throw new Error("Failed to load habits: " + (habitsResult.message || "Unknown error"));
-      setHabitsToday(habitsResult.habits || []);
-
-      // 3. Progress snapshot (use today's date for current progress)
-      // If more detailed stats are desired, a new endpoint would be needed.
-      const today = new Date().toISOString().slice(0, 10);
-      const progressResp = await fetchWithAuth(`${API_BASE}/progress?user_id=${userObj.id}&date=${today}`);
-      const progressResult = await progressResp.json();
-      let snap = null;
-      if (progressResult.success && progressResult.progress && progressResult.progress.length > 0) {
-        // Use the first (should be the only) entry for today
-        snap = {
-          ...progressResult.progress[0],
-          // Augment dummy values for snapshot card if missing
-          streak: progressResult.progress[0]?.streak ?? (progressResult.progress[0]?.total_checked > 0 ? 1 : 0),
-          completion_rate: (progressResult.progress[0]?.success_rate || 0) * 100,
-          total_completed: progressResult.progress[0]?.total_checked ?? 0,
-          habits_tracked: progressResult.progress[0]?.total_habits ?? 0,
-        };
-      }
-      setProgress(snap);
-
-      // 4. Quote of the Day
-      const quoteResp = await fetchWithAuth(`${API_BASE}/quote`);
-      const quoteResult = await quoteResp.json();
-      // The API returns {success, quote, author}
-      setQuote(quoteResult.success ?
-        { quote: quoteResult.quote, author: quoteResult.author } : null);
-
-      // 5. Emotions for the calendar (use backend's demo API)
-      // /api/emotion?user_id=N
-      const calendarEmoResp = await fetchWithAuth(`${API_BASE}/emotion?user_id=${userObj.id}`);
-      const calendarEmoResult = await calendarEmoResp.json();
-      let calendarEmoArray = [];
-      if (calendarEmoResult.success && calendarEmoResult.emotions) {
-        calendarEmoArray = Object.entries(calendarEmoResult.emotions).map(([date, emoji]) =>
-          ({ date, emoji, label: "", note: "" })); // label/note unsupported in backend but placeholder here
-      }
-      setEmotionData(calendarEmoArray);
-
-      // 6. Reflections (not implemented in backend; leave blank)
-      setCalendarReflections({});
-
-      setLoading(false);
-    } catch (e) {
-      setError(String(e));
-      setLoading(false);
-    }
-  }, [navigate]);
-
-  useEffect(() => {
-    fetchDashboardData();
-    // Add a storage event listener (to react to logout from other tabs)
-    function onStorage() {
-      if (!getSavedUser()) {
-        setUser(null);
-        navigate("/login");
-      }
-    }
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, [fetchDashboardData, navigate]);
-
-  // Handler: log out (just clears storage and navigates to login)
-  function handleLogout() {
-    window.sessionStorage.removeItem("habit_user");
-    window.localStorage.removeItem("habit_user");
-    setUser(null);
-    navigate("/login");
-  }
-
-  // Handler: Complete habit (simulate as updating progress, backend doesn't have per-habit completion endpoint)
-  async function handleCompleteHabit(habitId) {
-    setHabitsLoading(true);
-    try {
-      const userObj = getSavedUser();
-      if (!userObj) {
-        setHabitsLoading(false);
-        navigate("/login");
-        return;
-      }
-      // We'll update today's progress by POSTing to /api/progress, adding the checked habit.
-      const today = new Date().toISOString().slice(0, 10);
-
-      // Fetch current progress so we can update it
-      const existingProgressResp = await fetchWithAuth(`${API_BASE}/progress?user_id=${userObj.id}&date=${today}`);
-      const progressRes = await existingProgressResp.json();
-      let habit_checkmarks = {};
-      if (progressRes.success && Array.isArray(progressRes.progress) && progressRes.progress.length > 0) {
-        habit_checkmarks = { ...progressRes.progress[0].habit_checkmarks };
-      }
-      habit_checkmarks[habitId] = true;
-
-      // Send update
-      await fetchWithAuth(`${API_BASE}/progress`, {
-        method: "POST",
-        body: JSON.stringify({
-          user_id: userObj.id,
-          date: today,
-          habit_checkmarks
-        }),
-      });
-
-      // Re-fetch dashboard data (to update habits, progress, emotions)
-      await fetchDashboardData();
-    } catch {
-      // Ignore error for now (can add alert)
-    }
-    setHabitsLoading(false);
-  }
-
-  // Handler: Emotion log (from CalendarWithEmotions)
-  async function handleLogEmotion(date, emotion, notes) {
-    const userObj = getSavedUser();
-    if (!userObj) {
-      navigate("/login");
-      return;
-    }
-    // Store emotion using backend API (only emoji supported, notes ignored in backend)
-    await fetchWithAuth(`${API_BASE}/emotion`, {
-      method: "POST",
-      body: JSON.stringify({ user_id: userObj.id, date, emotion }),
-    });
-    await fetchDashboardData();
-  }
-
-  // Handler: Refresh Quote of the Day
-  async function handleRefreshQuote() {
-    // For demo, just refetch the quote
-    setQuote(null);
-    const quoteResp = await fetchWithAuth(`${API_BASE}/quote`);
-    const quoteResult = await quoteResp.json();
-    setQuote(quoteResult.success ?
-      { quote: quoteResult.quote, author: quoteResult.author } : null);
-  }
-
-  // Navigation shortcuts
-  const shortcuts = [
-    { label: "New Habit", icon: "➕", to: "/dashboard/new-habit" },
-    { label: "All Habits", icon: "📋", to: "/dashboard/habits" },
-    { label: "Progress", icon: "📊", to: "/dashboard/progress" },
-    { label: "Profile", icon: "👤", to: "/dashboard/profile" },
-    { label: "Settings", icon: "⚙️", to: "/dashboard/settings" },
-  ];
-
-  if (loading)
+// Decorative pastel banner (SVG illustration holder)
+function DecorativeBanner({ variant = "top" }) {
+  if (variant === "top") {
     return (
-      <div className="dashboard-root" style={{ padding: 40, textAlign: "center" }}>
-        <div className="dashboard-loader" />
-        Loading your dashboard...
+      <div
+        className="decor-banner-top"
+        style={{
+          height: 58,
+          width: "100%",
+          marginBottom: 18,
+          marginTop: -24,
+          position: "relative",
+          overflow: "hidden",
+          background: "linear-gradient(90deg, #FCE7F3 0%, #EFE4FA 100%)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <svg viewBox="0 0 400 58" style={{ width: "100%", height: "100%", display: "block" }}>
+          <ellipse cx="200" cy="30" rx="170" ry="22" fill="#EBD6FB" opacity="0.5" />
+          <ellipse cx="75" cy="50" rx="56" ry="12" fill="#F7A1B2" opacity="0.23" />
+          <ellipse cx="320" cy="38" rx="60" ry="10" fill="#C48DDC" opacity="0.20" />
+        </svg>
       </div>
     );
-  if (error)
-    return (
-      <div className="dashboard-root" style={{ color: "#f55", padding: 40 }}>
-        {error}
-        <br />
-        <button onClick={fetchDashboardData}>Retry</button>
-      </div>
-    );
+  }
+  return null;
+}
+
+// Map category/keyword to emoji or icon (expand as needed)
+const habitCategoryEmoji = {
+  mindfulness: "🧘‍♀️",
+  meditation: "🧘‍♂️",
+  meditate: "🧘‍♀️",
+  hydration: "💧",
+  water: "💧",
+  read: "📚",
+  reading: "📚",
+  movement: "🏃‍♂️",
+  exercise: "🏃‍♂️",
+  workout: "🏋️‍♂️",
+  journaling: "📔",
+  sleep: "😴",
+  gratitude: "🌼",
+  learning: "🎓",
+  study: "✏️",
+  healthyEating: "🥦",
+  walk: "🚶",
+  floss: "🦷",
+  yoga: "🧘",
+  cleaning: "🧹",
+  mood: "😌",
+  relax: "🌿",
+};
+
+// PUBLIC_INTERFACE
+export function getHabitEmoji(habitNameOrCategory) {
+  if (!habitNameOrCategory) return "✨";
+  const str = habitNameOrCategory.toLowerCase();
+  for (let key in habitCategoryEmoji) {
+    if (str.includes(key)) return habitCategoryEmoji[key];
+  }
+  return "✨";
+}
+
+function StreakBoard({ habit }) {
+  const today = new Date();
+  let history = habit.streakHistory || [1, 2, 1, 3, 0, 5, 6, 7, 6, 8, 7, 10];
+  if (history.length > 14) history = history.slice(-14);
+  else history = [...Array(14 - history.length).fill(0), ...history];
+  const maxVal = Math.max(7, ...history);
 
   return (
-    <div className="dashboard-root">
-      {/* 1. Header */}
-      <UserHeader user={user} onLogout={handleLogout} />
-
-      <div className="dashboard-section-grid">
-        {/* 2. Quote of the Day */}
-        <QuoteOfTheDayWidget
-          quote={quote}
-          onRefresh={handleRefreshQuote}
-        />
-
-        {/* 3. Progress snapshot */}
-        <ProgressSnapshotWidget progress={progress} />
-
-        {/* 4. Habits Today */}
-        <HabitsToday
-          habits={habitsToday}
-          onComplete={handleCompleteHabit}
-          loading={habitsLoading}
-        />
-
-        {/* 5. Mini calendar + emotions + reflections */}
-        <MiniCalendarWidget>
-          <CalendarWithEmotions
-            emotionData={emotionData}
-            reflections={calendarReflections}
-            onLogEmotion={handleLogEmotion}
+    <div
+      className="streak-board"
+      style={{
+        background: "linear-gradient(180deg, #FCE7F3 10%, #F6F3FB 90%)",
+        borderRadius: "14px",
+        padding: "18px 16px 14px 16px",
+        margin: "10px 0 18px 0",
+        boxShadow: "0 2px 13px rgba(138,117,217,0.09)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        minWidth: 0,
+      }}
+    >
+      <div
+        style={{
+          fontWeight: 700,
+          fontSize: "1rem",
+          color: "#62439B",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          marginBottom: 9,
+          letterSpacing: 0,
+        }}
+      >
+        <span style={{ fontSize: "1.32rem", marginRight: 3 }}>{getHabitEmoji(habit.name || habit.category)}</span>
+        {habit.name}
+      </div>
+      <div
+        style={{
+          fontSize: "0.96rem",
+          color: "#46466E",
+          fontWeight: 600,
+          marginBottom: 4,
+          letterSpacing: 0.1,
+        }}
+      >
+        Current Streak:{" "}
+        <span
+          style={{
+            color: "#C48DDC",
+            background: "#EFE4FA",
+            borderRadius: 8,
+            marginLeft: 5,
+            padding: "1.5px 9px",
+            fontWeight: 700,
+          }}
+        >
+          {habit.currentStreak || habit.streak || 0} days
+        </span>
+      </div>
+      <div
+        style={{
+          width: "100%",
+          height: 34,
+          display: "flex",
+          alignItems: "end",
+          gap: 2,
+          marginTop: 5,
+          marginBottom: 0,
+        }}
+      >
+        {history.map((val, i) => (
+          <div
+            key={i}
+            style={{
+              width: 8,
+              height: `${8 + 20 * (val / (maxVal || 1))}px`,
+              background: val === maxVal ? "#53A9F5" : "#C48DDC",
+              opacity: val > 0 ? 0.85 : 0.19,
+              borderRadius: 6,
+              marginRight: i === history.length - 1 ? 0 : 1,
+              transition: "height 0.32s",
+            }}
           />
-        </MiniCalendarWidget>
-
-        {/* 6. Navigation shortcuts */}
-        <DashboardShortcuts shortcuts={shortcuts} navigate={navigate} />
+        ))}
+      </div>
+      <div style={{ marginTop: 4, fontSize: "0.9rem", color: "#747497", opacity: 0.8 }} aria-label="streak chart explanation">
+        <span style={{ fontWeight: 400 }}>Last 2 weeks</span>
       </div>
     </div>
   );
 }
 
-// ----------------- Habits Today Component -----------------
+function TrendChartWidget({ data }) {
+  const chartData =
+    data && data.length > 0
+      ? data
+      : [
+          { date: "2024-06-01", completeCount: 1, total: 2 },
+          { date: "2024-06-02", completeCount: 2, total: 2 },
+          { date: "2024-06-03", completeCount: 1, total: 3 },
+          { date: "2024-06-04", completeCount: 3, total: 3 },
+          { date: "2024-06-05", completeCount: 2, total: 3 },
+          { date: "2024-06-06", completeCount: 3, total: 3 },
+          { date: "2024-06-07", completeCount: 2, total: 3 },
+        ];
 
-/**
- * PUBLIC_INTERFACE
- * Shows actionable habits for today (list with icons, completion, streak)
- */
-function HabitsToday({ habits, onComplete, loading }) {
+  const maxY = 100;
+  const width = Math.max(chartData.length * 38, 256);
+  const height = 74;
+  const barWidth = 16;
+  const margin = { l: 30, r: 12, t: 10, b: 20 };
+
+  const percents = chartData.map((d) =>
+    d.total ? Math.round((d.completeCount / d.total) * 100) : 0
+  );
+
   return (
-    <section className="dashboard-card habits-today">
-      <div className="dashboard-card-title">Today's Habits</div>
-      {habits.length === 0 ? (
-        <div style={{ color: "#aaa", fontSize: 16 }}>No habits assigned for today. 🎉</div>
-      ) : (
-        <div className="habits-today-list">
-          {habits.map((habit) => (
-            <div key={habit.id} className="habit-item">
-              <span className="habit-icon">{habit.icon || "💡"}</span>
-              <span className="habit-title">
-                {habit.name}
-                <span className="habit-streak">
-                  🔥 {habit.streak || 0}
-                </span>
-              </span>
-              <button
-                className="habit-complete-btn"
-                disabled={habit.completed || loading}
-                onClick={() => onComplete(habit.id)}
-              >
-                {habit.completed ? (
-                  <span role="img" aria-label="Done" style={{ color: "#4CDB75" }}>
-                    ✔️
-                  </span>
-                ) : (
-                  "Complete"
-                )}
-              </button>
-            </div>
+    <div
+      className="trend-chart-widget"
+      style={{
+        width: "100%",
+        background: "linear-gradient(90deg, #EBD6FB 30%, #EEF1F5 95%)",
+        borderRadius: "16px",
+        boxShadow: "0 2px 12px rgba(123,97,255,0.10)",
+        padding: "18px 12px 12px 12px",
+        margin: "16px 0 14px 0",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "flex-start",
+      }}
+    >
+      <div
+        style={{
+          fontWeight: 700,
+          color: "#62439B",
+          fontSize: "1.08rem",
+          marginBottom: 6,
+          marginLeft: 2,
+          letterSpacing: 0,
+          display: "flex",
+          alignItems: "center",
+          gap: 7,
+        }}
+      >
+        <span>📊</span> Habit Completion Trend
+      </div>
+      <div style={{ width: "100%", overflowX: "auto", paddingBottom: 4 }}>
+        <svg
+          width={width + margin.l + margin.r}
+          height={height + margin.t + margin.b}
+          style={{ maxWidth: "100%" }}
+        >
+          <line
+            x1={margin.l}
+            y1={height + margin.t}
+            x2={width + margin.l}
+            y2={height + margin.t}
+            stroke="#ddd"
+            strokeWidth="1"
+          />
+          {percents.map((p, i) => (
+            <rect
+              key={i}
+              x={margin.l + i * 38}
+              y={height + margin.t - height * (p / maxY)}
+              width={barWidth}
+              height={height * (p / maxY)}
+              rx={5}
+              fill="#53A9F5"
+              opacity={0.38 + 0.23 * (p / 100)}
+            />
           ))}
-        </div>
-      )}
-    </section>
+          <polyline
+            fill="none"
+            stroke="#C48DDC"
+            strokeWidth="2.7"
+            points={percents
+              .map(
+                (p, i) =>
+                  `${margin.l + i * 38 + barWidth / 2},${height +
+                    margin.t -
+                    height * (p / maxY)}`
+              )
+              .join(" ")}
+            style={{ filter: "drop-shadow(0 0.5px 3px #f7a1b240)" }}
+          />
+          {percents.map((p, i) => (
+            <circle
+              key={i}
+              cx={margin.l + i * 38 + barWidth / 2}
+              cy={height + margin.t - height * (p / maxY)}
+              r="4"
+              fill="#F7A1B2"
+            />
+          ))}
+          {chartData.map((d, i) => (
+            <text
+              key={i}
+              x={margin.l + i * 38 + barWidth / 2}
+              y={height + margin.t + 15}
+              textAnchor="middle"
+              fontSize="10"
+              fill="#978ABD"
+              style={{ fontFamily: "inherit" }}
+            >
+              {d.date.slice(5)}
+            </text>
+          ))}
+        </svg>
+      </div>
+    </div>
   );
 }
 
-// ----------------- Navigation Shortcuts Component -----------------
-/**
- * PUBLIC_INTERFACE
- * Compact dashboard navigation grid for quick access.
- */
-function DashboardShortcuts({ shortcuts, navigate }) {
+// HabitsToday with emoji enhancement.
+import HabitsTodayOriginal from "./HabitsToday";
+function EnhancedHabitsToday(props) {
   return (
-    <section className="dashboard-card dashboard-shortcuts">
-      <div className="dashboard-shortcuts-row">
-        {shortcuts.map((shortcut) => (
-          <button
-            key={shortcut.to}
-            className="dashboard-shortcut-btn"
-            onClick={() => navigate(shortcut.to)}
-          >
-            <span className="dashboard-shortcut-icon">{shortcut.icon}</span>
-            {shortcut.label}
-          </button>
-        ))}
+    <div>
+      <div style={{ width: "100%", marginBottom: 10 }}>
+        <span
+          style={{
+            fontSize: "1.325rem",
+            fontWeight: 700,
+            color: "#62439B",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 10,
+            letterSpacing: 0,
+            background: "rgba(253,240,253,0.7)",
+            padding: "6px 18px 6px 13px",
+            borderRadius: 13,
+            boxShadow: "0 1px 6px #ebd5fa22",
+          }}
+        >
+          <span>🗓️</span> Today's habits
+        </span>
       </div>
-    </section>
+      <HabitsTodayOriginal {...props} emojiMap={habitCategoryEmoji} getHabitEmoji={getHabitEmoji} />
+    </div>
+  );
+}
+
+function Dashboard() {
+  const [user, setUser] = useState(null);
+  const [habits, setHabits] = useState([
+    {
+      name: "Hydration",
+      category: "hydration",
+      streak: 6,
+      streakHistory: [1, 2, 3, 3, 4, 5, 6, 3, 3, 4, 5, 6, 6, 6],
+      progress: [true, true, false],
+    },
+    {
+      name: "Read Book",
+      category: "reading",
+      streak: 4,
+      streakHistory: [0, 1, 1, 2, 3, 2, 3, 2, 2, 1, 2, 4, 4, 4],
+      progress: [true, false, true],
+    },
+    {
+      name: "Mindfulness",
+      category: "mindfulness",
+      streak: 8,
+      streakHistory: [1, 2, 2, 3, 5, 7, 7, 8, 8, 7, 8, 8, 8, 8],
+      progress: [true, true, true],
+    },
+  ]);
+  const [completionTrend, setCompletionTrend] = useState([
+    { date: "2024-06-23", completeCount: 2, total: 3 },
+    { date: "2024-06-24", completeCount: 3, total: 3 },
+    { date: "2024-06-25", completeCount: 2, total: 3 },
+    { date: "2024-06-26", completeCount: 1, total: 3 },
+    { date: "2024-06-27", completeCount: 3, total: 3 },
+    { date: "2024-06-28", completeCount: 3, total: 3 },
+    { date: "2024-06-29", completeCount: 2, total: 3 },
+  ]);
+  useEffect(() => {
+    setUser({
+      name: "Jane Doe",
+      avatar: "https://randomuser.me/api/portraits/women/52.jpg",
+    });
+    // Here: if fetching API, setHabits(fetchedHabits); setCompletionTrend(fetchedTrend)
+  }, []);
+
+  return (
+    <div className="dashboard-root">
+      <DecorativeBanner variant="top" />
+      <UserHeader user={user} />
+      <main className="dashboard-main">
+        <div className="dashboard-main-content">
+          <EnhancedHabitsToday user={user} habits={habits} />
+          <div
+            style={{
+              marginBottom: 10,
+              marginTop: -8,
+              display: "flex",
+              flexDirection: "column",
+              gap: 0,
+              width: "100%",
+            }}
+          >
+            {habits.map((habit, idx) => (
+              <StreakBoard key={habit.name || idx} habit={habit} />
+            ))}
+          </div>
+          <div style={{ margin: "0 0 18px 0" }}>
+            <svg
+              width="180"
+              height="16"
+              viewBox="0 0 180 16"
+              style={{
+                width: "80%",
+                maxWidth: 220,
+                minHeight: 10,
+                display: "block",
+                margin: "8px auto",
+              }}
+            >
+              <ellipse cx="70" cy="10" rx="56" ry="5" fill="#F7A1B2" opacity="0.21" />
+              <ellipse cx="120" cy="8" rx="20" ry="3" fill="#C48DDC" opacity="0.17" />
+            </svg>
+          </div>
+          <TrendChartWidget data={completionTrend} />
+          <ProgressSnapshotWidget user={user} />
+          <MiniCalendarWidget user={user} />
+          <QuoteOfTheDayWidget />
+        </div>
+      </main>
+    </div>
   );
 }
 
