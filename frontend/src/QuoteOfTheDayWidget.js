@@ -14,12 +14,19 @@ function QuoteOfTheDayWidget() {
   // Fetch random quote from backend
   const fetchQuote = async () => {
     try {
-      // API endpoint assumed as backend's /api/quotes/random (update if needed)
-      const response = await axios.get("/api/quotes/random");
+      // Correct endpoint: backend's /api/quote for random quote delivery
+      const response = await axios.get("/api/quote");
       const data = response.data;
-      // Accept either { text, author } or { quote: { text, author } }
-      if ("text" in data && "author" in data) setQuote({ text: data.text, author: data.author });
-      else if ("quote" in data) setQuote({ text: data.quote.text, author: data.quote.author });
+      // Backend returns { success, quote, author } on success
+      if (data && data.success && typeof data.quote === "string" && data.author) {
+        setQuote({ text: data.quote, author: data.author });
+      } else {
+        // fallback for unexpected structure
+        setQuote({
+          text: "Start each day with a grateful heart.",
+          author: "Unknown",
+        });
+      }
     } catch (e) {
       // Fallback or silent error
       setQuote({
