@@ -15,7 +15,7 @@ const MONTH_NAMES = [
 // Set of available smiley emoji for today-only selector (expandable)
 const EMOJI_OPTIONS = [
   "😀","😁","😊","😇","🙂","😉","😌","😍","🤩","🥳",
-  "😜","😎","😐","😕","🙁","😞","😢","😭","😡","🤔",
+  "😜","😎","😐","😕","☹️","😞","😢","😭","😡","🤔",
   "😏","😴","😅","😂","😭","😱"
 ];
 
@@ -64,8 +64,10 @@ function CalendarWithEmotions() {
   });
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
 
-  // For proper popover
+  // For proper popover/menu positioning
   const todayButtonRef = useRef(null);
+  // To focus first button in popover (for a11y)
+  const emojiPopoverRef = useRef(null);
 
   useEffect(() => {
     // On mount: load emotionData from storage
@@ -123,20 +125,9 @@ function CalendarWithEmotions() {
     setEmojiPickerOpen(false);
   }
 
-  // Click outside closes
-  useEffect(() => {
-    if (!emojiPickerOpen) return;
-    function listener(e) {
-      if (
-        todayButtonRef.current &&
-        !todayButtonRef.current.contains(e.target)
-      ) {
-        setEmojiPickerOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", listener, true);
-    return () => document.removeEventListener("mousedown", listener, true);
-  }, [emojiPickerOpen]);
+  // Custom: only close popover if user clicks backdrop, Close X, Remove, or pick emoji
+  // Prevent premature close on unrelated interactions.
+  // Focus trap is not implemented, but can be added for even better accessibility.
 
   // Get emoji for calendar date
   function emojiForDate(dateObj) {
@@ -144,8 +135,8 @@ function CalendarWithEmotions() {
     return emotionData[dateISO(dateObj)] || "";
   }
 
-  // Render emoji picker popover (absolute, layered over, without disturbing layout)
-  function EmojiPickerPopover({ anchorRef, onSelect, onRemove, onClose }) {
+  // Render emoji picker popover (absolutely positioned, overlays page)
+  function EmojiPickerPopover({ anchorRef, onSelect, onRemove, onClose, open }) {
     // Render the popover near today's cell
     const [style, setStyle] = useState({});
     useEffect(() => {
@@ -167,64 +158,98 @@ function CalendarWithEmotions() {
         gap: "4px 7px",
         maxWidth: 350,
       });
-    }, [anchorRef]);
+      // Optional: Focus on first emoji button for accessibility when opened
+      if (emojiPopoverRef.current) {
+        const btn = emojiPopoverRef.current.querySelector("button");
+        if (btn) btn.focus();
+      }
+    }, [anchorRef, open]);
+
+    // Only close if user specifically clicks backdrop (NOT inside popover), or close btn
+    const popoverBackdropStyle = {
+      position: "fixed",
+      top: 0, left: 0, width: "100vw", height: "100vh",
+      background: "transparent",
+      zIndex: 999
+    };
+
     return (
-      <div style={style}>
-        {EMOJI_OPTIONS.map((emoji, i) => (
+      <>
+        <div
+          style={popoverBackdropStyle}
+          onMouseDown={e => {
+            // Only close if click is directly on the backdrop, and not any floating children
+            if (e.target === e.currentTarget) onClose();
+          }}
+          tabIndex={-1}
+          aria-label="Close emoji picker"
+          role="presentation"
+        />
+        <div
+          ref={emojiPopoverRef}
+          style={style}
+          onMouseDown={e => e.stopPropagation()} // so clicks inside modal don't propagate
+          role="dialog"
+          tabIndex={-1}
+          aria-modal="true"
+        >
+          {EMOJI_OPTIONS.map((emoji, i) => (
+            <button
+              key={emoji}
+              style={{
+                fontSize: "1.54em",
+                width: 37,
+                height: 35,
+                margin: "0 2.3px 6px 2.3px",
+                background: "#F6F4FB",
+                border: "none",
+                borderRadius: 8,
+                cursor: "pointer",
+                outline: "none",
+                fontWeight: emotionData[todayISOstr] === emoji ? 800 : 500,
+                boxShadow: emotionData[todayISOstr] === emoji ? "0 0 0 3.5px #AC69F055" : "none"
+              }}
+              onClick={() => onSelect(emoji)}
+              tabIndex={0}
+              aria-label={"Set emotion " + emoji}
+            >
+              {emoji}
+            </button>
+          ))}
           <button
-            key={emoji}
             style={{
-              fontSize: "1.54em",
-              width: 37,
-              height: 35,
-              margin: "0 2.3px 6px 2.3px",
-              background: "#F6F4FB",
+              marginLeft: 9,
+              background: "#FFE4ED",
               border: "none",
-              borderRadius: 8,
+              borderRadius: 12,
+              color: "#BD3973",
+              fontWeight: 700,
+              fontSize: "1.04em",
+              padding: "5px 15px",
               cursor: "pointer",
-              outline: "none",
-              fontWeight: emotionData[todayISOstr] === emoji ? 800 : 500,
-              boxShadow: emotionData[todayISOstr] === emoji ? "0 0 0 3.5px #AC69F055" : "none"
+              minWidth: 48
             }}
-            onClick={() => onSelect(emoji)}
+            onClick={onRemove}
             tabIndex={0}
-            aria-label={"Set emotion " + emoji}
-          >
-            {emoji}
-          </button>
-        ))}
-        <button
-          style={{
-            marginLeft: 9,
-            background: "#FFE4ED",
-            border: "none",
-            borderRadius: 12,
-            color: "#BD3973",
-            fontWeight: 700,
-            fontSize: "1.04em",
-            padding: "5px 15px",
-            cursor: "pointer",
-            minWidth: 48
-          }}
-          onClick={onRemove}
-          tabIndex={0}
-        >Remove</button>
-        <button
-          style={{
-            marginLeft: 9,
-            background: "#EEE",
-            border: "none",
-            borderRadius: 9,
-            color: "#998fae",
-            fontWeight: 600,
-            fontSize: "0.94em",
-            padding: "4.5px 10px",
-            cursor: "pointer"
-          }}
-          onClick={onClose}
-          tabIndex={0}
-        >✕</button>
-      </div>
+          >Remove</button>
+          <button
+            style={{
+              marginLeft: 9,
+              background: "#EEE",
+              border: "none",
+              borderRadius: 9,
+              color: "#998fae",
+              fontWeight: 600,
+              fontSize: "0.94em",
+              padding: "4.5px 10px",
+              cursor: "pointer"
+            }}
+            onClick={onClose}
+            tabIndex={0}
+            aria-label="Close emoji selector"
+          >×</button>
+        </div>
+      </>
     )
   }
 
@@ -437,6 +462,7 @@ function CalendarWithEmotions() {
           onSelect={handleSelectEmoji}
           onRemove={handleRemoveEmoji}
           onClose={() => setEmojiPickerOpen(false)}
+          open={emojiPickerOpen}
         />
       )}
 
