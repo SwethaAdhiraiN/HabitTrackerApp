@@ -6,30 +6,25 @@ import React, { useState, useEffect, useRef } from "react";
  * Displays a monthly calendar with emoji emotion markers per date.
  * Today only: click today's cell to assign/remove any emoji via menu (emojis are stored in localStorage).
  * The visual appearance of the calendar remains identical except for today's emoji badge.
+ * 
+ * FIX: Ensures the emoji picker/modal never closes immediately after triggering—focus and event/click logic are 
+ * robust to avoid premature dismissal and only close on user explicit click outside, X, or emoji selection.
  */
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
 ];
-
-// Set of available smiley emoji for today-only selector (expandable)
 const EMOJI_OPTIONS = [
-  "😀","😁","😊","😇","🙂","😉","😌","😍","🤩","🥳",
+  "😀","😁","😊","😇","🙂","😉","😌","😍","🥳","🥰",
   "😜","😎","😐","😕","☹️","😞","😢","😭","😡","🤔",
   "😏","😴","😅","😂","😭","😱"
 ];
-
-// Util: zero pad
 function pad(num) {
   return num < 10 ? "0" + num : "" + num;
 }
-
-// Util: get ISO yyyy-mm-dd for a Date
 function dateISO(date) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
-
-// Util: get month matrix (array of weeks, each week = array of dates/null)
 function getMonthMatrix(year, monthIdx) {
   const firstDay = new Date(year, monthIdx, 1);
   const lastDay = new Date(year, monthIdx + 1, 0);
@@ -49,7 +44,6 @@ function getMonthMatrix(year, monthIdx) {
   }
   return matrix;
 }
-
 function todayISO() {
   const now = new Date();
   return dateISO(now);
@@ -66,7 +60,7 @@ function CalendarWithEmotions() {
 
   // For proper popover/menu positioning
   const todayButtonRef = useRef(null);
-  // To focus first button in popover (for a11y)
+  // Accessibility
   const emojiPopoverRef = useRef(null);
 
   useEffect(() => {
@@ -76,21 +70,18 @@ function CalendarWithEmotions() {
       if (raw) setEmotionData(JSON.parse(raw));
     } catch {}
   }, []);
-
-  // Save emotionData on change
   useEffect(() => {
     try {
       localStorage.setItem("emotion-tracker", JSON.stringify(emotionData));
     } catch {}
   }, [emotionData]);
 
-  // Calendar matrix for current month
+  // Calendar
   const year = selected.getFullYear();
   const monthIdx = selected.getMonth();
   const todayISOstr = todayISO();
   const monthMatrix = getMonthMatrix(year, monthIdx);
 
-  // Navigation
   function goToPrevMonth() {
     setSelected(prev => {
       const m = prev.getMonth() === 0 ? 11 : prev.getMonth() - 1;
@@ -98,7 +89,6 @@ function CalendarWithEmotions() {
       return new Date(y, m, 1);
     });
   }
-
   function goToNextMonth() {
     setSelected(prev => {
       const m = prev.getMonth() === 11 ? 0 : prev.getMonth() + 1;
@@ -124,20 +114,17 @@ function CalendarWithEmotions() {
     });
     setEmojiPickerOpen(false);
   }
-
-  // Custom: only close popover if user clicks backdrop, Close X, Remove, or pick emoji
-  // Prevent premature close on unrelated interactions.
-  // Focus trap is not implemented, but can be added for even better accessibility.
-
-  // Get emoji for calendar date
   function emojiForDate(dateObj) {
     if (!dateObj) return "";
     return emotionData[dateISO(dateObj)] || "";
   }
 
-  // Render emoji picker popover (absolutely positioned, overlays page)
+  /**
+   * EmojiPickerPopover - appears absolutely near the today cell, closes
+   * only on explicit user action (click-outside _backdrop_, X, or emoji selection)
+   */
   function EmojiPickerPopover({ anchorRef, onSelect, onRemove, onClose, open }) {
-    // Render the popover near today's cell
+    // Position calculation
     const [style, setStyle] = useState({});
     useEffect(() => {
       if (!anchorRef.current) return;
@@ -158,37 +145,41 @@ function CalendarWithEmotions() {
         gap: "4px 7px",
         maxWidth: 350,
       });
-      // Optional: Focus on first emoji button for accessibility when opened
+      // Accessibility: focus first emoji button when opened
       if (emojiPopoverRef.current) {
-        const btn = emojiPopoverRef.current.querySelector("button");
-        if (btn) btn.focus();
+        setTimeout(() => {
+          const btn = emojiPopoverRef.current.querySelector("button");
+          if (btn) btn.focus();
+        }, 0);
       }
     }, [anchorRef, open]);
 
-    // Only close if user specifically clicks backdrop (NOT inside popover), or close btn
-    const popoverBackdropStyle = {
-      position: "fixed",
-      top: 0, left: 0, width: "100vw", height: "100vh",
-      background: "transparent",
-      zIndex: 999
+    // Prevent closing on mouse-down inside modal, only close if on backdrop
+    const handleBackdropMouseDown = (e) => {
+      if (e.target === e.currentTarget) {
+        onClose();
+      }
     };
 
     return (
       <>
         <div
-          style={popoverBackdropStyle}
-          onMouseDown={e => {
-            // Only close if click is directly on the backdrop, and not any floating children
-            if (e.target === e.currentTarget) onClose();
+          style={{
+            position: "fixed",
+            top: 0, left: 0, width: "100vw", height: "100vh",
+            background: "transparent",
+            zIndex: 999
           }}
+          onMouseDown={handleBackdropMouseDown}
           tabIndex={-1}
           aria-label="Close emoji picker"
           role="presentation"
+          data-testid="emoji-backdrop"
         />
         <div
           ref={emojiPopoverRef}
           style={style}
-          onMouseDown={e => e.stopPropagation()} // so clicks inside modal don't propagate
+          onMouseDown={e => e.stopPropagation()} // in-modal clicks never bubble to close
           role="dialog"
           tabIndex={-1}
           aria-modal="true"
@@ -212,6 +203,7 @@ function CalendarWithEmotions() {
               onClick={() => onSelect(emoji)}
               tabIndex={0}
               aria-label={"Set emotion " + emoji}
+              type="button"
             >
               {emoji}
             </button>
@@ -231,6 +223,7 @@ function CalendarWithEmotions() {
             }}
             onClick={onRemove}
             tabIndex={0}
+            type="button"
           >Remove</button>
           <button
             style={{
@@ -247,13 +240,14 @@ function CalendarWithEmotions() {
             onClick={onClose}
             tabIndex={0}
             aria-label="Close emoji selector"
+            type="button"
           >×</button>
         </div>
       </>
     )
   }
 
-  // Calendar render
+  // Calendar UI
   return (
     <section
       style={{
@@ -395,7 +389,6 @@ function CalendarWithEmotions() {
             return (
               <button
                 key={dISO}
-                // Only today gets a ref and click handler
                 ref={isToday ? todayButtonRef : null}
                 aria-label={`Day ${d}` + (emoji ? `, feeling ${emoji}` : "")}
                 onClick={
@@ -403,8 +396,10 @@ function CalendarWithEmotions() {
                     ? (e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        // Always open the emoji picker, never toggle or close on re-click
-                        setEmojiPickerOpen(true);
+                        // Set in timeout to avoid blur/close race
+                        setTimeout(() => {
+                          setEmojiPickerOpen(true);
+                        }, 0);
                       }
                     : undefined
                 }
@@ -486,3 +481,4 @@ function CalendarWithEmotions() {
 }
 
 export default CalendarWithEmotions;
+
