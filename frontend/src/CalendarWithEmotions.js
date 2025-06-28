@@ -112,6 +112,7 @@ function CalendarWithEmotions({ style = {} }) {
   const { first, numDays } = getMonthDays(year, month);
 
   // Find the user's emotion map for the current month on mount/refresh.
+  // Fetch and display emotions for the user only once on mount
   useEffect(() => {
     if (!user) return;
     setLoading(true);
@@ -124,7 +125,9 @@ function CalendarWithEmotions({ style = {} }) {
       })
       .catch(() => setError("Could not load emotions"))
       .finally(() => setLoading(false));
-  }, [user]);
+  // Only fetch on mount (not on every user change)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function handleDayClick(day) {
     // Only today's date opens modal
@@ -138,7 +141,10 @@ function CalendarWithEmotions({ style = {} }) {
     }
   }
 
+  // PUBLIC_INTERFACE
   function handleSaveEmotion(emoji) {
+    // 1. Save new emotion via API
+    // 2. After a successful POST, re-fetch the full emotion dataset and update in place (showing loader only within the modal)
     if (!user) return;
     setLoading(true);
     fetch("/api/emotion", {
@@ -153,12 +159,17 @@ function CalendarWithEmotions({ style = {} }) {
       .then(r => r.ok ? r.json() : Promise.reject("API error"))
       .then(data => {
         setModalOpen(false);
-        setEmotions(em => ({
-          ...(em || {}),
-          [toISO(today)]: emoji
-        }));
         setChosen(emoji);
-        setLoading(false);
+
+        // Immediately re-fetch emotion data for UI update; keep calendar visible
+        fetch(`/api/emotion?user_id=${user.id}`)
+          .then(r => r.ok ? r.json() : Promise.reject("API error"))
+          .then(data => {
+            if (!data.success) throw new Error("API: Not Success");
+            setEmotions(data.emotions || {});
+          })
+          .catch(() => setError("Could not load emotions"))
+          .finally(() => setLoading(false));
       })
       .catch(() => {
         setError("Could not save emotion. Try again.");
