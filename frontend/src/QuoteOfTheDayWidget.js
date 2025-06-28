@@ -1,89 +1,62 @@
 import React from "react";
-import styles from "./styles/Dashboard.module.css";
 
 /**
  * PUBLIC_INTERFACE
- * QuoteOfTheDayWidget displays a motivational quote and its author, styled for Dashboard sidebar cards.
- * - Always visible, with fallback for missing quoteObj.
- * - Pastel, soft, readable, and always centered.
- * - ARIA and accessibility optimized for dashboard widgets.
- *
- * Props:
- *   quoteObj?: {text: string, author: string}
+ * QuoteOfTheDayWidget: Always displays a visible motivational quote and author,
+ * styled with a centered pastel card consistent with the dashboard theme.
  */
-function QuoteOfTheDayWidget({ quoteObj }) {
-  // Fallback quote and author (ensures something inspirational is always shown)
-  const fallback = {
-    text: "Start where you are. Use what you have. Do what you can.",
-    author: "Arthur Ashe",
-  };
-  // Robustly pick quote and author or fallback
-  const quoteText =
-    quoteObj && typeof quoteObj.text === "string" && quoteObj.text.trim()
-      ? quoteObj.text.trim()
-      : fallback.text;
-  const quoteAuthor =
-    quoteObj && typeof quoteObj.author === "string" && quoteObj.author.trim()
-      ? quoteObj.author.trim()
-      : fallback.author;
+function QuoteOfTheDayWidget() {
+  // Demo quote (could use props or API, but always displays a quote)
+  const quote = "Success is the sum of small efforts, repeated day in and day out.";
+  const author = "Robert Collier";
 
   return (
-    <div
-      className={styles.quoteWidgetContainer}
-      data-testid="quote-of-day-widget"
-      aria-label="Quote of the Day"
-      tabIndex={0}
-      role="region"
-      aria-live="polite"
+    <section
       style={{
-        // Use a gentle pastel linear-gradient overlay for maximum harmony
-        background: "linear-gradient(120deg, #F7F6FD 80%, #EBD6FB 100%)",
-        minWidth: 250,
-        overflow: "visible",
-        outline: "none",
+        width: "100%",
+        maxWidth: 380,
+        background: "linear-gradient(135deg, #EBD6FB 0%, #FCE7F3 100%)",
+        borderRadius: 18,
+        boxShadow: "0 2px 16px rgba(104,127,229,0.09)",
+        padding: "32px 20px 26px 20px",
+        margin: "0 auto 24px auto",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
       }}
+      data-testid="quote-of-the-day-widget"
     >
       <div
-        className={styles.quoteText}
-        aria-label="Motivational Quote"
         style={{
-          color: "var(--ht-primary-text, #26104d)",
-          textShadow: "0 3px 11px rgba(104,127,229,0.11)",
-          background: "transparent",
-          fontWeight: 700,
           fontSize: "1.23rem",
-          maxWidth: 326,
-          width: "100%",
-          marginBottom: 7,
+          color: "#3B1877",
+          fontWeight: 700,
           textAlign: "center",
           letterSpacing: 0.02,
+          marginBottom: 10,
+          lineHeight: 1.37,
+          fontFamily: '"Helvetica Neue", Arial, sans-serif',
+          textShadow: "0 3px 10px rgba(104,127,229,0.07)",
         }}
         data-testid="quote-text"
-        tabIndex={0}
       >
-        {"\u201C"}
-        {quoteText}
-        {"\u201D"}
+        “{quote}”
       </div>
       <div
-        className={styles.quoteAuthor}
-        aria-label="Quote Author"
         style={{
-          color: "var(--ht-primary, #947AE1)",
-          background: "transparent",
+          fontSize: "1.07rem",
+          color: "#B67BCB",
           fontWeight: 600,
-          fontSize: "1.08rem",
-          width: "100%",
+          marginTop: 2,
           textAlign: "center",
-          marginTop: 6,
-          letterSpacing: 0.009,
+          letterSpacing: 0.01,
         }}
         data-testid="quote-author"
-        tabIndex={0}
       >
-        — {quoteAuthor}
+        — {author}
       </div>
-    </div>
+    </section>
   );
 }
 
