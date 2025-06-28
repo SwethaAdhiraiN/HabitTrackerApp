@@ -4,14 +4,10 @@ import React, { useState, useRef, useLayoutEffect } from "react";
  * PUBLIC_INTERFACE
  * CalendarWithEmotions
  * Displays a monthly calendar with emoji emotion markers per date.
- * Clicking any day cell opens the emoji picker for that day, with the menu visually anchored below the cell in the grid.
- * Responsive to device and window resizing—popover always stays within calendar and viewport.
- *
- * - emotionData: { 'YYYY-MM-DD': emoji }
- * - Clicking any day allows assigning/removing emoji for that day.
- * - Emoji picker is always visually aligned below the clicked cell.
- * - Picker closes on emoji select, remove, ×, or clicking outside the menu.
+ * Only today's cell is interactive for logging/updating/removing emotion.
+ * All other days are view-only (click ignored, visually less interactive).
  */
+
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
@@ -77,7 +73,9 @@ function CalendarWithEmotions() {
 
   const year = selected.getFullYear();
   const monthIdx = selected.getMonth();
-  const todayISOstr = dateISO(new Date());
+  const todayObj = new Date();
+  const todayISOstr = dateISO(todayObj);
+  const isCurrentMonth = todayObj.getFullYear() === year && todayObj.getMonth() === monthIdx;
   const monthMatrix = getMonthMatrix(year, monthIdx);
 
   // Calendar navigation
@@ -98,25 +96,33 @@ function CalendarWithEmotions() {
     setEmojiPickerOpen(null);
   }
 
-  // Clicking a day cell: anchor popover at that cell via ref
-  function handleOpenEmojiPicker(dISO) {
+  // Visual feedback: only today's cell is interactive
+  function isDateTodayCell(dateObj) {
+    return (
+      dateObj &&
+      isCurrentMonth &&
+      dateObj.getDate() === todayObj.getDate()
+    );
+  }
+
+  // Only allow emoji picker to open on today's cell
+  function handleOpenEmojiPicker(dISO, dateObj) {
+    if (!dateObj || !isDateTodayCell(dateObj)) return;
     setEmojiPickerOpen(dISO);
-    // Will update anchor after render
+
+    // Anchor position
     setTimeout(() => {
-      // Defensive: Calendar cell refs can be unset during rapid navigation/render
       const ref = dayCellRefs.current && dayCellRefs.current[dISO];
       const calRefCurrent = calendarRef.current;
       if (ref && calRefCurrent) {
         const rect = ref.getBoundingClientRect();
         const calRect = calRefCurrent.getBoundingClientRect();
-        // Compute px position relative to calendar wrapper (for absolute anchoring)
         setPopoverPos({
-          top: rect.bottom - calRect.top, // offset from top of calendar
-          left: rect.left - calRect.left + rect.width / 2, // center of cell in calendar
+          top: rect.bottom - calRect.top,
+          left: rect.left - calRect.left + rect.width / 2,
           width: rect.width,
         });
       } else {
-        // Could not anchor popover: fallback to top-left (or do nothing, popover will appear next render)
         setPopoverPos(pos => ({
           ...pos,
         }));
@@ -143,7 +149,6 @@ function CalendarWithEmotions() {
   // On scroll/resize/calendarRef changes: update popover anchor
   useLayoutEffect(() => {
     if (!emojiPickerOpen) return;
-    // Defensive: Guard cell refs in edge cases (rapid navigation)
     const ref = dayCellRefs.current && dayCellRefs.current[emojiPickerOpen];
     const calRefCurrent = calendarRef.current;
     if (ref && calRefCurrent) {
@@ -178,13 +183,13 @@ function CalendarWithEmotions() {
     // eslint-disable-next-line
   }, [emojiPickerOpen, selected]);
 
-  // Emoji for date helper
   function emojiForDate(dateObj) {
     if (!dateObj) return "";
     return emotionData[dateISO(dateObj)] || "";
   }
 
-  /** EmojiPickerPopover
+  /**
+   * EmojiPickerPopover
    * Popup menu visually anchored below clicked date cell (from popoverPos).
    * Responsive positioning—never overflow outside calendar.
    */
@@ -193,7 +198,6 @@ function CalendarWithEmotions() {
     const [menuStyle, setMenuStyle] = useState({});
 
     useLayoutEffect(() => {
-      // Defensive: Only proceed if all refs and popoverPos are valid
       if (
         !popoverRef.current ||
         !calendarParentRef.current ||
@@ -203,24 +207,21 @@ function CalendarWithEmotions() {
         return;
 
       const calWidth = calendarParentRef.current.offsetWidth;
-      const menuRect = popoverRef.current.getBoundingClientRect();
       let leftPx = popoverPos.left;
-      let minLeft = 8; // px relative to left of calendar
-      let maxLeft = calWidth - 262 - 8; // popover width + right pad
+      let minLeft = 8;
+      let maxLeft = calWidth - 262 - 8;
 
-      if (leftPx - 130 < minLeft) leftPx = minLeft + 130; // center min edge
+      if (leftPx - 130 < minLeft) leftPx = minLeft + 130;
       if (leftPx - 130 > maxLeft + 130) leftPx = maxLeft + 130;
-      let actualLeft = leftPx - 130; // menu is 260px wide, center at cell
+      let actualLeft = leftPx - 130;
       if (actualLeft < minLeft) actualLeft = minLeft;
       if (actualLeft > maxLeft) actualLeft = maxLeft;
 
       setMenuStyle({
         left: actualLeft,
-        top: popoverPos.top + 8, // 8px below cell
+        top: popoverPos.top + 8,
       });
-      // Accessibility: focus first emoji button
       setTimeout(() => {
-        // Defensive: Only query if still mounted and present
         if (popoverRef.current) {
           const btn = popoverRef.current.querySelector
             ? popoverRef.current.querySelector("button")
@@ -434,7 +435,7 @@ function CalendarWithEmotions() {
           marginBottom: 4,
         }}
       >
-        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(wd => (
+        ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(wd => (
           <div
             key={wd}
             style={{
@@ -449,7 +450,7 @@ function CalendarWithEmotions() {
           >
             {wd}
           </div>
-        ))}
+        ))
       </div>
       {/* Calendar grid */}
       <div
@@ -467,50 +468,102 @@ function CalendarWithEmotions() {
             if (!dateObj) return <div key={`blank-${wi}-${di}`} />;
             const d = dateObj.getDate();
             const dISO = dateISO(dateObj);
-            const isToday = dISO === todayISOstr;
+            const isToday = isDateTodayCell(dateObj);
             const emoji = emojiForDate(dateObj);
 
+            // Only today is interactive; others look muted and clicking them does nothing
+            if (isToday) {
+              return (
+                <button
+                  key={dISO}
+                  ref={el => { if (el) dayCellRefs.current[dISO] = el; }}
+                  aria-label={`Today, ${d}. Click to log or change your emotion.`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleOpenEmojiPicker(dISO, dateObj);
+                  }}
+                  style={{
+                    aspectRatio: "1",
+                    width: "100%",
+                    minWidth: 0,
+                    minHeight: 32,
+                    maxWidth: 44,
+                    background: "linear-gradient(90deg,#F9EBFF 65%,#DCFAF5 100%)",
+                    border: "none",
+                    outline: "2.5px solid var(--ht-primary,#6951C7)",
+                    borderRadius: 13,
+                    margin: 0,
+                    padding: "0.27rem 0 0.23rem 0",
+                    fontSize: 15.2,
+                    fontWeight: 700,
+                    color: "#463B70",
+                    cursor: "pointer",
+                    position: "relative",
+                    boxShadow: "0 2px 9px rgba(140,119,217,.12)",
+                    transition: "background .13s, outline .13s",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                  tabIndex={0}
+                  type="button"
+                  title="Today: Click to log/update your mood"
+                >
+                  <span>{d}</span>
+                  {emoji && (
+                    <span
+                      style={{
+                        display: "inline-block",
+                        fontSize: "1.22em",
+                        marginTop: 1,
+                        lineHeight: 1.24,
+                      }}
+                    >
+                      {emoji}
+                    </span>
+                  )}
+                </button>
+              );
+            }
+
+            // All other days: view-only (not interactive)
             return (
-              <button
+              <div
                 key={dISO}
                 ref={el => { if (el) dayCellRefs.current[dISO] = el; }}
-                aria-label={`Day ${d}` + (emoji ? `, feeling ${emoji}` : "")}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleOpenEmojiPicker(dISO);
-                }}
+                aria-label={`Day ${d}. View only.`}
                 style={{
                   aspectRatio: "1",
                   width: "100%",
                   minWidth: 0,
                   minHeight: 32,
                   maxWidth: 44,
-                  background: isToday
-                    ? "linear-gradient(90deg,#F9EBFF 65%,#DCFAF5 100%)"
-                    : "rgba(249,249,252,0.94)",
+                  background: "rgba(249,249,252,0.76)",
                   border: "none",
-                  outline: isToday ? "2.2px solid #6951C7" : "none",
+                  outline: "none",
                   borderRadius: 13,
                   margin: 0,
                   padding: "0.27rem 0 0.23rem 0",
                   fontSize: 15.2,
                   fontWeight: 500,
-                  color: "#483795",
-                  cursor: "pointer",
+                  color: "#C0BDD6",
+                  cursor: "default",
+                  opacity: 0.60,
                   position: "relative",
-                  boxShadow: isToday ? "0 2px 9px rgba(140,119,217,.12)" : "none",
-                  transition: "background .13s, outline .13s",
+                  boxShadow: "none",
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "center",
                   alignItems: "center",
+                  userSelect: "none",
+                  pointerEvents: "none", // disables click!
                 }}
-                tabIndex={0}
-                type="button"
+                tabIndex={-1}
+                title="Past/future date. View only."
               >
                 <span>{d}</span>
-                {/* Emoji badge if present */}
                 {emoji && (
                   <span
                     style={{
@@ -523,7 +576,21 @@ function CalendarWithEmotions() {
                     {emoji}
                   </span>
                 )}
-              </button>
+                {/* Visual lock for non-today */}
+                <span
+                  style={{
+                    position: "absolute",
+                    right: 4,
+                    bottom: 3,
+                    fontSize: "1em",
+                    color: "#E7D7F2"
+                  }}
+                  aria-hidden="true"
+                  title="Locked"
+                >
+                  🔒
+                </span>
+              </div>
             );
           }),
         )}
@@ -557,4 +624,3 @@ function CalendarWithEmotions() {
 }
 
 export default CalendarWithEmotions;
-
