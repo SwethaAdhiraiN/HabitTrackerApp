@@ -1,26 +1,25 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef, useLayoutEffect } from "react";
 
 /**
  * PUBLIC_INTERFACE
  * CalendarWithEmotions
  * Displays a monthly calendar with emoji emotion markers per date.
- * Today only: click today's cell to assign/remove any emoji via menu (emojis are stored in localStorage).
- * The visual appearance of the calendar remains identical except for today's emoji badge.
- * 
- * Modal Synchronous Open/Close:
- * - The emoji picker/modal for today's cell opens synchronously with setEmojiPickerOpen(true); there is NO setTimeout.
- * - The modal only closes by explicit user action: emoji select, Remove, × button, or clicking the outside fixed overlay.
- * - No automatic or accidental closure occurs; all handlers enforce this.
+ * Clicking any day cell opens the emoji picker for that day, with the menu visually anchored below the cell in the grid.
+ * Responsive to device and window resizing—popover always stays within calendar and viewport.
+ *
+ * - emotionData: { 'YYYY-MM-DD': emoji }
+ * - Clicking any day allows assigning/removing emoji for that day.
+ * - Emoji picker is always visually aligned below the clicked cell.
+ * - Picker closes on emoji select, remove, ×, or clicking outside the menu.
  */
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
 ];
 const EMOJI_OPTIONS = [
-  "😀","😁","😊","😇","🙂","😉","😌","😍","🥳","🥰",
-  "😜","😎","😐","😕","☹️","😞","😢","😭","😡","🤔",
-  "😏","😴","😅","😂","😭","😱"
+  "😄", "😊", "😐", "😟", "😢", "🥳", "😴", "💪", "😭", "😅", "🫤", "😜"
 ];
+
 function pad(num) {
   return num < 10 ? "0" + num : "" + num;
 }
@@ -46,51 +45,49 @@ function getMonthMatrix(year, monthIdx) {
   }
   return matrix;
 }
-function todayISO() {
-  const now = new Date();
-  return dateISO(now);
-}
 
 function CalendarWithEmotions() {
   // emotionData: { 'YYYY-MM-DD': emoji }
-  const [emotionData, setEmotionData] = useState({});
+  const [emotionData, setEmotionData] = useState(() => {
+    try {
+      const raw = localStorage.getItem("emotion-tracker");
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  });
   const [selected, setSelected] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
-  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(null); // key: dateISO
+  const [popoverPos, setPopoverPos] = useState({ top: 0, left: 0, width: 0 });
 
-  // For proper popover/menu positioning
-  const todayButtonRef = useRef(null);
-  const calendarRef = useRef(null); // anchor emoji popover within calendar
-  // Accessibility for emoji popover
-  const emojiPopoverRef = useRef(null);
+  // Refs for all day-cells; keys = dateISO strings
+  const dayCellRefs = useRef({});
+  // Parent calendar wrap ref (for bounding)
+  const calendarRef = useRef(null);
 
-  useEffect(() => {
-    // On mount: load emotionData from storage
-    try {
-      const raw = localStorage.getItem("emotion-tracker");
-      if (raw) setEmotionData(JSON.parse(raw));
-    } catch {}
-  }, []);
-  useEffect(() => {
+  // Save emotionData to storage on change
+  React.useEffect(() => {
     try {
       localStorage.setItem("emotion-tracker", JSON.stringify(emotionData));
     } catch {}
   }, [emotionData]);
 
-  // Calendar
   const year = selected.getFullYear();
   const monthIdx = selected.getMonth();
-  const todayISOstr = todayISO();
+  const todayISOstr = dateISO(new Date());
   const monthMatrix = getMonthMatrix(year, monthIdx);
 
+  // Calendar navigation
   function goToPrevMonth() {
     setSelected(prev => {
       const m = prev.getMonth() === 0 ? 11 : prev.getMonth() - 1;
       const y = prev.getMonth() === 0 ? prev.getFullYear() - 1 : prev.getFullYear();
       return new Date(y, m, 1);
     });
+    setEmojiPickerOpen(null);
   }
   function goToNextMonth() {
     setSelected(prev => {
@@ -98,180 +95,216 @@ function CalendarWithEmotions() {
       const y = prev.getMonth() === 11 ? prev.getFullYear() + 1 : prev.getFullYear();
       return new Date(y, m, 1);
     });
+    setEmojiPickerOpen(null);
   }
 
-  // Set emoji for today
-  function handleSelectEmoji(emoji) {
+  // Clicking a day cell: anchor popover at that cell via ref
+  function handleOpenEmojiPicker(dISO) {
+    setEmojiPickerOpen(dISO);
+    // Will update anchor after render
+    setTimeout(() => {
+      const ref = dayCellRefs.current[dISO];
+      if (ref && calendarRef.current) {
+        const rect = ref.getBoundingClientRect();
+        const calRect = calendarRef.current.getBoundingClientRect();
+        // Compute px position relative to calendar wrapper (for absolute anchoring)
+        setPopoverPos({
+          top: rect.bottom - calRect.top, // offset from top of calendar
+          left: rect.left - calRect.left + rect.width/2, // center of cell in calendar
+          width: rect.width
+        });
+      }
+    }, 0);
+  }
+
+  function handleSetEmoji(dayISO, emoji) {
     setEmotionData(prev => ({
       ...prev,
-      [todayISOstr]: emoji
+      [dayISO]: emoji
     }));
-    setEmojiPickerOpen(false);
+    setEmojiPickerOpen(null);
   }
-  // Remove today's emoji
-  function handleRemoveEmoji() {
+  function handleRemoveEmoji(dayISO) {
     setEmotionData(prev => {
       const next = { ...prev };
-      delete next[todayISOstr];
+      delete next[dayISO];
       return next;
     });
-    setEmojiPickerOpen(false);
+    setEmojiPickerOpen(null);
   }
+
+  // On scroll/resize/calendarRef changes: update popover anchor
+  useLayoutEffect(() => {
+    if (!emojiPickerOpen) return;
+    const ref = dayCellRefs.current[emojiPickerOpen];
+    if (ref && calendarRef.current) {
+      const rect = ref.getBoundingClientRect();
+      const calRect = calendarRef.current.getBoundingClientRect();
+      setPopoverPos({
+        top: rect.bottom - calRect.top,
+        left: rect.left - calRect.left + rect.width/2,
+        width: rect.width
+      });
+    }
+    function recalc() {
+      if (!emojiPickerOpen) return;
+      const refUpd = dayCellRefs.current[emojiPickerOpen];
+      if (refUpd && calendarRef.current) {
+        const rectUpd = refUpd.getBoundingClientRect();
+        const calRectUpd = calendarRef.current.getBoundingClientRect();
+        setPopoverPos({
+          top: rectUpd.bottom - calRectUpd.top,
+          left: rectUpd.left - calRectUpd.left + rectUpd.width/2,
+          width: rectUpd.width
+        });
+      }
+    }
+    window.addEventListener("resize", recalc);
+    window.addEventListener("scroll", recalc, true);
+    return () => {
+      window.removeEventListener("resize", recalc);
+      window.removeEventListener("scroll", recalc, true);
+    };
+    // eslint-disable-next-line
+  }, [emojiPickerOpen, selected]);
+
+  // Emoji for date helper
   function emojiForDate(dateObj) {
     if (!dateObj) return "";
     return emotionData[dateISO(dateObj)] || "";
   }
 
-  /**
-   * EmojiPickerPopover - appears absolutely near the today cell, closes
-   * only on explicit user action: emoji choice, Remove, ×, or overlay click.
+  /** EmojiPickerPopover
+   * Popup menu visually anchored below clicked date cell (from popoverPos).
+   * Responsive positioning—never overflow outside calendar.
    */
-  function EmojiPickerPopover({ anchorRef, calendarParentRef, onSelect, onRemove, onClose, open }) {
-    // Position calculation
-    const [style, setStyle] = useState({});
+  function EmojiPickerPopover({ popoverPos, anchorISO, onSelect, onRemove, onClose, calendarParentRef }) {
+    const popoverRef = useRef(null);
+    const [menuStyle, setMenuStyle] = useState({});
 
-    useEffect(() => {
-      if (!anchorRef.current || !calendarParentRef.current) return;
-      const anchorRect = anchorRef.current.getBoundingClientRect();
-      const calendarRect = calendarParentRef.current.getBoundingClientRect();
+    useLayoutEffect(() => {
+      if (!popoverRef.current || !calendarParentRef.current) return;
+      const calWidth = calendarParentRef.current.offsetWidth;
+      const menuRect = popoverRef.current.getBoundingClientRect();
+      let leftPx = popoverPos.left;
+      let minLeft = 8; // px relative to left of calendar
+      let maxLeft = calWidth - 262 - 8; // popover width + right pad
 
-      // Compute horizontal centering below the anchor (today)
-      const popoverWidth = 260; // default, matches minWidth below
-      // Put popover centered below cell, but clamp left/right to calendar
-      let left =
-        anchorRect.left +
-        anchorRect.width / 2 -
-        popoverWidth / 2 +
-        window.scrollX;
+      if (leftPx - 130 < minLeft) leftPx = minLeft + 130; // center min edge
+      if (leftPx - 130 > maxLeft + 130) leftPx = maxLeft + 130;
+      let actualLeft = leftPx - 130; // menu is 260px wide, center at cell
+      if (actualLeft < minLeft) actualLeft = minLeft;
+      if (actualLeft > maxLeft) actualLeft = maxLeft;
 
-      const minLeft = calendarRect.left + 6 + window.scrollX; // small pad from calendar left
-      const maxLeft = calendarRect.right - popoverWidth - 6 + window.scrollX; // pad from right
-
-      left = Math.max(minLeft, Math.min(left, maxLeft));
-
-      setStyle({
-        position: "absolute",
-        top: anchorRect.bottom + window.scrollY + 8,
-        left,
-        zIndex: 1000,
-        background: "#fff",
-        border: "1.2px solid #EBD7FF",
-        borderRadius: 13,
-        boxShadow: "0 2px 17px rgba(102,80,179,.13)",
-        minWidth: 260,
-        maxWidth: 360,
-        width: "auto",
-        padding: "14px 12px 11px 12px",
-        display: "flex",
-        flexWrap: "wrap",
-        gap: "4px 7px",
+      setMenuStyle({
+        left: actualLeft,
+        top: popoverPos.top + 8, // 8px below cell
       });
-      // Accessibility: focus first emoji button when opened
-      if (emojiPopoverRef.current) {
-        setTimeout(() => {
-          const btn = emojiPopoverRef.current.querySelector("button");
-          if (btn) btn.focus();
-        }, 0);
-      }
-    }, [anchorRef, open, calendarParentRef]);
+      // Accessibility: focus first emoji button
+      setTimeout(() => {
+        const btn = popoverRef.current.querySelector("button");
+        if (btn) btn.focus();
+      }, 0);
+      // eslint-disable-next-line
+    }, [popoverPos.left, popoverPos.top, anchorISO, calendarParentRef]);
 
-    // Allow closing modal ONLY on explicit user action - emoji, Remove, ×, or overlay
-    // Overlay click closes only if direct (not bubbling from modal).
-    const handleBackdropMouseDown = (e) => {
-      if (e.target === e.currentTarget) {
-        onClose();
+    // Close on outside click
+    useLayoutEffect(() => {
+      function handleDocClick(e) {
+        if (
+          popoverRef.current &&
+          !popoverRef.current.contains(e.target)
+        ) {
+          onClose();
+        }
       }
-    };
-
-    // Prevent closing from any click within the popover
-    const handlePopoverMouseDown = (e) => {
-      e.stopPropagation();
-    };
+      document.addEventListener("mousedown", handleDocClick);
+      return () => document.removeEventListener("mousedown", handleDocClick);
+    }, [onClose]);
 
     return (
-      <>
-        <div
-          style={{
-            position: "fixed",
-            top: 0, left: 0, width: "100vw", height: "100vh",
-            background: "transparent",
-            zIndex: 999
-          }}
-          onMouseDown={handleBackdropMouseDown} // closes only if user direct-outside
-          tabIndex={-1}
-          aria-label="Close emoji picker"
-          role="presentation"
-          data-testid="emoji-backdrop"
-        />
-        <div
-          ref={emojiPopoverRef}
-          style={style}
-          onMouseDown={handlePopoverMouseDown} // never bubble to close
-          role="dialog"
-          tabIndex={-1}
-          aria-modal="true"
-        >
-          {EMOJI_OPTIONS.map((emoji, i) => (
-            <button
-              key={emoji}
-              style={{
-                fontSize: "1.54em",
-                width: 37,
-                height: 35,
-                margin: "0 2.3px 6px 2.3px",
-                background: "#F6F4FB",
-                border: "none",
-                borderRadius: 8,
-                cursor: "pointer",
-                outline: "none",
-                fontWeight: emotionData[todayISOstr] === emoji ? 800 : 500,
-                boxShadow: emotionData[todayISOstr] === emoji ? "0 0 0 3.5px #AC69F055" : "none"
-              }}
-              onClick={() => onSelect(emoji)}
-              tabIndex={0}
-              aria-label={"Set emotion " + emoji}
-              type="button"
-            >
-              {emoji}
-            </button>
-          ))}
+      <div
+        ref={popoverRef}
+        style={{
+          position: "absolute",
+          zIndex: 1000,
+          minWidth: 260,
+          background: "#fff",
+          border: "1.2px solid #EBD7FF",
+          borderRadius: 13,
+          boxShadow: "0 2px 17px rgba(102,80,179,.13)",
+          padding: "14px 12px 11px 12px",
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "4px 7px",
+          maxWidth: 360,
+          ...menuStyle,
+          transition: "opacity 0.13s",
+        }}
+        role="dialog"
+        aria-modal="true"
+        tabIndex={-1}
+      >
+        {EMOJI_OPTIONS.map((emoji) => (
           <button
+            key={emoji}
             style={{
-              marginLeft: 9,
-              background: "#FFE4ED",
+              fontSize: "1.48em",
+              width: 37,
+              height: 35,
+              margin: "0 2.2px 6px 2.2px",
+              background: emotionData[anchorISO] === emoji ? "#F6F4FB" : "#FAF8FE",
               border: "none",
-              borderRadius: 12,
-              color: "#BD3973",
-              fontWeight: 700,
-              fontSize: "1.04em",
-              padding: "5px 15px",
+              borderRadius: 8,
               cursor: "pointer",
-              minWidth: 48
+              outline: "none",
+              fontWeight: emotionData[anchorISO] === emoji ? 800 : 500,
+              boxShadow: emotionData[anchorISO] === emoji ? "0 0 0 3.5px #AC69F055" : "none"
             }}
-            onClick={onRemove}
+            onClick={() => onSelect(anchorISO, emoji)}
             tabIndex={0}
+            aria-label={"Set emotion " + emoji}
             type="button"
-          >Remove</button>
-          <button
-            style={{
-              marginLeft: 9,
-              background: "#EEE",
-              border: "none",
-              borderRadius: 9,
-              color: "#998fae",
-              fontWeight: 600,
-              fontSize: "0.94em",
-              padding: "4.5px 10px",
-              cursor: "pointer"
-            }}
-            onClick={onClose}
-            tabIndex={0}
-            aria-label="Close emoji selector"
-            type="button"
-          >×</button>
-        </div>
-      </>
-    )
+          >
+            {emoji}
+          </button>
+        ))}
+        <button
+          style={{
+            marginLeft: 9,
+            background: "#FFE4ED",
+            border: "none",
+            borderRadius: 12,
+            color: "#BD3973",
+            fontWeight: 700,
+            fontSize: "1.04em",
+            padding: "5px 15px",
+            cursor: "pointer",
+            minWidth: 48
+          }}
+          onClick={() => onRemove(anchorISO)}
+          tabIndex={0}
+          type="button"
+        >Remove</button>
+        <button
+          style={{
+            marginLeft: 9,
+            background: "#EEE",
+            border: "none",
+            borderRadius: 9,
+            color: "#998fae",
+            fontWeight: 600,
+            fontSize: "0.94em",
+            padding: "4.5px 10px",
+            cursor: "pointer"
+          }}
+          onClick={onClose}
+          tabIndex={0}
+          aria-label="Close emoji selector"
+          type="button"
+        >×</button>
+      </div>
+    );
   }
 
   // Calendar UI
@@ -288,7 +321,7 @@ function CalendarWithEmotions() {
         margin: "0 auto",
         boxSizing: "border-box",
         fontFamily: '"Helvetica Neue", Arial, sans-serif',
-        position: "relative"
+        position: "relative",
       }}
     >
       {/* Calendar month/year header with navigation */}
@@ -374,7 +407,7 @@ function CalendarWithEmotions() {
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(7, 1fr)",
-          gap: "0.2rem",
+          gap: "0.18rem",
           marginBottom: 4,
         }}
       >
@@ -400,9 +433,9 @@ function CalendarWithEmotions() {
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(7, 1fr)",
-          gap: "0.27rem",
-          minHeight: 210,
-          marginBottom: 8,
+          gap: "0.26rem",
+          minHeight: 185,
+          marginBottom: 9,
           alignItems: "stretch",
         }}
       >
@@ -417,18 +450,13 @@ function CalendarWithEmotions() {
             return (
               <button
                 key={dISO}
-                ref={isToday ? todayButtonRef : null}
+                ref={el => { if (el) dayCellRefs.current[dISO] = el; }}
                 aria-label={`Day ${d}` + (emoji ? `, feeling ${emoji}` : "")}
-                onClick={
-                  isToday
-                    ? (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        // --- OPEN SYNCHRONOUSLY: setEmojiPickerOpen(true); No setTimeout.
-                        setEmojiPickerOpen(true);
-                      }
-                    : undefined
-                }
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleOpenEmojiPicker(dISO);
+                }}
                 style={{
                   aspectRatio: "1",
                   width: "100%",
@@ -439,14 +467,14 @@ function CalendarWithEmotions() {
                     ? "linear-gradient(90deg,#F9EBFF 65%,#DCFAF5 100%)"
                     : "rgba(249,249,252,0.94)",
                   border: "none",
-                  outline: isToday ? "2.3px solid #6951C7" : "none",
+                  outline: isToday ? "2.2px solid #6951C7" : "none",
                   borderRadius: 13,
                   margin: 0,
                   padding: "0.27rem 0 0.23rem 0",
                   fontSize: 15.2,
                   fontWeight: 500,
                   color: "#483795",
-                  cursor: isToday ? "pointer" : "default",
+                  cursor: "pointer",
                   position: "relative",
                   boxShadow: isToday ? "0 2px 9px rgba(140,119,217,.12)" : "none",
                   transition: "background .13s, outline .13s",
@@ -464,9 +492,9 @@ function CalendarWithEmotions() {
                   <span
                     style={{
                       display: "inline-block",
-                      fontSize: "1.38em",
+                      fontSize: "1.22em",
                       marginTop: 1,
-                      lineHeight: 1.2,
+                      lineHeight: 1.24,
                     }}
                   >
                     {emoji}
@@ -474,22 +502,20 @@ function CalendarWithEmotions() {
                 )}
               </button>
             );
-          })
+          }),
         )}
       </div>
-
       {/* Popover for emoji picker, overlays above, not disrupting layout */}
       {emojiPickerOpen && (
         <EmojiPickerPopover
-          anchorRef={todayButtonRef}
-          calendarParentRef={calendarRef}
-          onSelect={handleSelectEmoji}
+          popoverPos={popoverPos}
+          anchorISO={emojiPickerOpen}
+          onSelect={handleSetEmoji}
           onRemove={handleRemoveEmoji}
-          onClose={() => setEmojiPickerOpen(false)}
-          open={emojiPickerOpen}
+          onClose={() => setEmojiPickerOpen(null)}
+          calendarParentRef={calendarRef}
         />
       )}
-
       {/* Today summary (for accessibility/feedback): */}
       <div
         style={{
