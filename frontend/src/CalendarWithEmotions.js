@@ -103,16 +103,23 @@ function CalendarWithEmotions() {
     setEmojiPickerOpen(dISO);
     // Will update anchor after render
     setTimeout(() => {
-      const ref = dayCellRefs.current[dISO];
-      if (ref && calendarRef.current) {
+      // Defensive: Calendar cell refs can be unset during rapid navigation/render
+      const ref = dayCellRefs.current && dayCellRefs.current[dISO];
+      const calRefCurrent = calendarRef.current;
+      if (ref && calRefCurrent) {
         const rect = ref.getBoundingClientRect();
-        const calRect = calendarRef.current.getBoundingClientRect();
+        const calRect = calRefCurrent.getBoundingClientRect();
         // Compute px position relative to calendar wrapper (for absolute anchoring)
         setPopoverPos({
           top: rect.bottom - calRect.top, // offset from top of calendar
-          left: rect.left - calRect.left + rect.width/2, // center of cell in calendar
-          width: rect.width
+          left: rect.left - calRect.left + rect.width / 2, // center of cell in calendar
+          width: rect.width,
         });
+      } else {
+        // Could not anchor popover: fallback to top-left (or do nothing, popover will appear next render)
+        setPopoverPos(pos => ({
+          ...pos,
+        }));
       }
     }, 0);
   }
@@ -136,26 +143,29 @@ function CalendarWithEmotions() {
   // On scroll/resize/calendarRef changes: update popover anchor
   useLayoutEffect(() => {
     if (!emojiPickerOpen) return;
-    const ref = dayCellRefs.current[emojiPickerOpen];
-    if (ref && calendarRef.current) {
+    // Defensive: Guard cell refs in edge cases (rapid navigation)
+    const ref = dayCellRefs.current && dayCellRefs.current[emojiPickerOpen];
+    const calRefCurrent = calendarRef.current;
+    if (ref && calRefCurrent) {
       const rect = ref.getBoundingClientRect();
-      const calRect = calendarRef.current.getBoundingClientRect();
+      const calRect = calRefCurrent.getBoundingClientRect();
       setPopoverPos({
         top: rect.bottom - calRect.top,
-        left: rect.left - calRect.left + rect.width/2,
-        width: rect.width
+        left: rect.left - calRect.left + rect.width / 2,
+        width: rect.width,
       });
     }
     function recalc() {
       if (!emojiPickerOpen) return;
-      const refUpd = dayCellRefs.current[emojiPickerOpen];
-      if (refUpd && calendarRef.current) {
+      const refUpd = dayCellRefs.current && dayCellRefs.current[emojiPickerOpen];
+      const calRectUpd = calendarRef.current;
+      if (refUpd && calRectUpd) {
         const rectUpd = refUpd.getBoundingClientRect();
-        const calRectUpd = calendarRef.current.getBoundingClientRect();
+        const calRectUpdRect = calRectUpd.getBoundingClientRect();
         setPopoverPos({
-          top: rectUpd.bottom - calRectUpd.top,
-          left: rectUpd.left - calRectUpd.left + rectUpd.width/2,
-          width: rectUpd.width
+          top: rectUpd.bottom - calRectUpdRect.top,
+          left: rectUpd.left - calRectUpdRect.left + rectUpd.width / 2,
+          width: rectUpd.width,
         });
       }
     }
@@ -183,7 +193,15 @@ function CalendarWithEmotions() {
     const [menuStyle, setMenuStyle] = useState({});
 
     useLayoutEffect(() => {
-      if (!popoverRef.current || !calendarParentRef.current) return;
+      // Defensive: Only proceed if all refs and popoverPos are valid
+      if (
+        !popoverRef.current ||
+        !calendarParentRef.current ||
+        typeof popoverPos.left !== "number" ||
+        typeof popoverPos.top !== "number"
+      )
+        return;
+
       const calWidth = calendarParentRef.current.offsetWidth;
       const menuRect = popoverRef.current.getBoundingClientRect();
       let leftPx = popoverPos.left;
@@ -202,8 +220,13 @@ function CalendarWithEmotions() {
       });
       // Accessibility: focus first emoji button
       setTimeout(() => {
-        const btn = popoverRef.current.querySelector("button");
-        if (btn) btn.focus();
+        // Defensive: Only query if still mounted and present
+        if (popoverRef.current) {
+          const btn = popoverRef.current.querySelector
+            ? popoverRef.current.querySelector("button")
+            : null;
+          if (btn) btn.focus();
+        }
       }, 0);
       // eslint-disable-next-line
     }, [popoverPos.left, popoverPos.top, anchorISO, calendarParentRef]);
