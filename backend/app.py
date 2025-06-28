@@ -292,17 +292,18 @@ def create_app():
     @app.route("/api/quote", methods=["GET"])
     def get_quote():
         """
-        Get the "quote of the day".
-        Returns one quote from quotes.json based on date, cycling through if needed.
+        Get a random motivational quote.
+        Returns one random quote from quotes.json on each request.
         """
         quotes = read_json(QUOTES_FILE, [])
         if not quotes:
             return jsonify({"success": False, "message": "No quotes found"}), 404
-        # Pseudo-random (stable) selection for the day:
-        day_idx = (datetime.date.today().day + datetime.date.today().month) % len(quotes)
-        q = quotes[day_idx]
-        # Provide response as {quote: ..., author: ...}, not nested
-        return jsonify({"success": True, "quote": q.get("text", ""), "author": q.get("author", "Unknown")})
+        quote = random.choice(quotes)
+        return jsonify({
+            "success": True,
+            "quote": quote.get("text", ""),
+            "author": quote.get("author", "Unknown")
+        })
 
     # ---- EMOTION (PER-DAY, PER-USER, EMOJI) TRACKING ----
     # PUBLIC_INTERFACE
