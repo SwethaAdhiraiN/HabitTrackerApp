@@ -1,10 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
 import MiniCalendarWidget from "./MiniCalendarWidget";
 import ProgressSnapshotWidget from "./ProgressSnapshotWidget";
 import QuoteOfTheDayWidget from "./QuoteOfTheDayWidget";
 import UserHeader from "./UserHeader";
 import styles from "./styles/Dashboard.module.css";
+
+// Dynamic import for CalendarWithEmotions using React.lazy for code-splitting
+const CalendarWithEmotions = lazy(() => import("./CalendarWithEmotions"));
 
 // Spinner: pastel, dashboard-consistent
 function PastelSpinner({size = 36, duration = 1.1}) {
@@ -406,16 +409,9 @@ function Dashboard() {
             minHeight={170}
             style={{marginBottom: 0, background: "var(--ht-surface,#EBD6FB)"}}>
             {/* CalendarWithEmotions */}
-            {/*
-              Responsive, matches sidebar. This card appears below Quote/calendar widgets.
-              Appears at >1000px desktop as part of sidebar, below calendar/quote, and at <1000px as stacked.
-            */}
-            <React.Suspense fallback={<div>Loading calendar...</div>}>
-              {typeof window !== "undefined" && (
-                require("./CalendarWithEmotions").default ? 
-                  < (require("./CalendarWithEmotions").default) /> : null
-              )}
-            </React.Suspense>
+            <Suspense fallback={<div>Loading calendar...</div>}>
+              <CalendarWithEmotions />
+            </Suspense>
           </DashboardCard>
         </aside>
       </div>
