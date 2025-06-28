@@ -7,8 +7,10 @@ import React, { useState, useEffect, useRef } from "react";
  * Today only: click today's cell to assign/remove any emoji via menu (emojis are stored in localStorage).
  * The visual appearance of the calendar remains identical except for today's emoji badge.
  * 
- * FIX: Ensures the emoji picker/modal never closes immediately after triggering—focus and event/click logic are 
- * robust to avoid premature dismissal and only close on user explicit click outside, X, or emoji selection.
+ * Modal Synchronous Open/Close:
+ * - The emoji picker/modal for today's cell opens synchronously with setEmojiPickerOpen(true); there is NO setTimeout.
+ * - The modal only closes by explicit user action: emoji select, Remove, × button, or clicking the outside fixed overlay.
+ * - No automatic or accidental closure occurs; all handlers enforce this.
  */
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -60,7 +62,7 @@ function CalendarWithEmotions() {
 
   // For proper popover/menu positioning
   const todayButtonRef = useRef(null);
-  // Accessibility
+  // Accessibility for emoji popover
   const emojiPopoverRef = useRef(null);
 
   useEffect(() => {
@@ -121,7 +123,7 @@ function CalendarWithEmotions() {
 
   /**
    * EmojiPickerPopover - appears absolutely near the today cell, closes
-   * only on explicit user action (click-outside _backdrop_, X, or emoji selection)
+   * only on explicit user action: emoji choice, Remove, ×, or overlay click.
    */
   function EmojiPickerPopover({ anchorRef, onSelect, onRemove, onClose, open }) {
     // Position calculation
@@ -154,11 +156,17 @@ function CalendarWithEmotions() {
       }
     }, [anchorRef, open]);
 
-    // Prevent closing on mouse-down inside modal, only close if on backdrop
+    // Allow closing modal ONLY on explicit user action - emoji, Remove, ×, or overlay
+    // Overlay click closes only if direct (not bubbling from modal).
     const handleBackdropMouseDown = (e) => {
       if (e.target === e.currentTarget) {
         onClose();
       }
+    };
+
+    // Prevent closing from any click within the popover
+    const handlePopoverMouseDown = (e) => {
+      e.stopPropagation();
     };
 
     return (
@@ -170,7 +178,7 @@ function CalendarWithEmotions() {
             background: "transparent",
             zIndex: 999
           }}
-          onMouseDown={handleBackdropMouseDown}
+          onMouseDown={handleBackdropMouseDown} // closes only if user direct-outside
           tabIndex={-1}
           aria-label="Close emoji picker"
           role="presentation"
@@ -179,7 +187,7 @@ function CalendarWithEmotions() {
         <div
           ref={emojiPopoverRef}
           style={style}
-          onMouseDown={e => e.stopPropagation()} // in-modal clicks never bubble to close
+          onMouseDown={handlePopoverMouseDown} // never bubble to close
           role="dialog"
           tabIndex={-1}
           aria-modal="true"
@@ -396,7 +404,7 @@ function CalendarWithEmotions() {
                     ? (e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        // Open synchronously—no setTimeout. Ensures no race and stays open until explicitly closed.
+                        // --- OPEN SYNCHRONOUSLY: setEmojiPickerOpen(true); No setTimeout.
                         setEmojiPickerOpen(true);
                       }
                     : undefined
