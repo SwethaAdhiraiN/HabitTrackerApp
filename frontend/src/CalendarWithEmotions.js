@@ -396,10 +396,8 @@ function CalendarWithEmotions() {
                     ? (e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        // Set in timeout to avoid blur/close race
-                        setTimeout(() => {
-                          setEmojiPickerOpen(true);
-                        }, 0);
+                        // Open synchronously—no setTimeout. Ensures no race and stays open until explicitly closed.
+                        setEmojiPickerOpen(true);
                       }
                     : undefined
                 }
