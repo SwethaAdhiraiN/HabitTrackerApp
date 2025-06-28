@@ -1,11 +1,13 @@
 import React from "react";
+import CalendarWithEmotions from "./CalendarWithEmotions";
 import styles from "./styles/Dashboard.module.css";
 
 /**
  * PUBLIC_INTERFACE
- * Dashboard page for HabitTrackerApp (OLD VERSION - BEFORE REDESIGN)
- * This component renders the dashboard with the previous simple layout,
- * restoring the structure and style prior to the visual overhaul.
+ * Dashboard page for HabitTrackerApp (ENHANCED VERSION)
+ * This component renders the dashboard with emotion calendar integration.
+ * The CalendarWithEmotions component is inserted as a visually distinct section,
+ * matching with the current card layout and does not alter other widgets.
  */
 const Dashboard = () => {
   return (
@@ -38,6 +40,11 @@ const Dashboard = () => {
               <span className={styles.statLabel}>Success Rate</span>
             </div>
           </div>
+        </section>
+
+        <section className={styles.section}>
+          <h4>Track Your Emotions</h4>
+          <CalendarWithEmotions />
         </section>
 
         <section className={styles.section}>
