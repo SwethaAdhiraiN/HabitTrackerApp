@@ -1,418 +1,269 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 
-// Colors: ['#FCD8CD', '#FEEBF6', '#EBD6FB', '#687FE5'] (main pastels, accent).
-const pastelPalette = ["#FCD8CD", "#FEEBF6", "#EBD6FB", "#687FE5"];
-
-// All standard Unicode smiley/emotion emoji (neutral color for each, since browser renders natively)
-const EMOTION_EMOJIS = [
-  "😀", "😃", "😄", "😁", "😆", "😉", "😊", "🙂", "🙃", "😋",
-  "😎", "😍", "🥰", "😘", "😗", "😙", "😚", "🤗", "☺️", "🤔",
-  "😐", "😶", "😑", "😬", "🙄", "😏", "😔", "😞", "😟", "😕",
-  "😣", "😖", "😫", "😩", "🥺", "😢", "😭", "😤", "😠", "😡",
-  "🤬", "🤯", "😳", "🥵", "🥶", "😱", "😨", "😰", "😥", "😓",
-  "🤤", "😴", "😪", "🤒", "🤕", "🤑", "🤠", "😷", "🤡", "👿",
-  "😇", "🥳"
-];
-
-// Find user from storage (session/local)
-function getCurrentUser() {
-  try {
-    const u =
-      JSON.parse(sessionStorage.getItem("habit_user") || localStorage.getItem("habit_user") || "null");
-    return u && u.id ? u : null;
-  } catch {
-    return null;
-  }
-}
-
-// Helper for Modal
-function Modal({ open, onClose, children }) {
-  if (!open) return null;
-  return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 80,
-        background: "rgba(34,34,55,0.18)",
-        backdropFilter: "blur(2.6px)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        transition: "background 0.15s",
-      }}
-      onClick={onClose}
-      aria-modal="true"
-      role="dialog"
-    >
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          minWidth: 240,
-          maxWidth: "96vw",
-          width: 348,
-          background: "#fff",
-          borderRadius: 24,
-          boxShadow: "0 3px 27px #cbbbe8bb, 0 1.5px 6px #eae4fc",
-          padding: "30px 24px 23px 24px",
-          position: "relative",
-          fontFamily: "inherit"
-        }}
-      >
-        {children}
-        <button
-          type="button"
-          tabIndex={0}
-          aria-label="Close Modal"
-          style={{
-            position: "absolute",
-            top: 13, right: 16,
-            background: "none", border: "none", fontSize: 21,
-            color: "#687FE5", cursor: "pointer", borderRadius: 6,
-            transition: "background .14s",
-          }}
-          onClick={onClose}
-        >×</button>
-      </div>
-    </div>
-  );
-}
-
-function getMonthDays(year, month) {
-  // 0-indexed month
-  const first = new Date(year, month, 1);
-  const last = new Date(year, month + 1, 0);
-  const numDays = last.getDate();
-  return { first, last, numDays };
-}
-
-// Format date as YYYY-MM-DD (UTC)
-function toISO(d) {
-  return d.toISOString().slice(0, 10);
-}
+// Calendar grid constants
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const EMOTION_EMOJIS = {
+  happy: "😊",
+  neutral: "😐",
+  sad: "😞",
+  angry: "😠",
+  excited: "🤩",
+  tired: "😩",
+  stressed: "😰",
+  // ...add more as needed
+};
 
 /**
  * PUBLIC_INTERFACE
- * CalendarWithEmotions
- * Shows a full monthly responsive pastel calendar, with per-day emotion emojis overlaid.
- * Clicking today's date opens modal for selecting emoji, which is POSTed to backend and calendar updates.
- * On load, fetches all mapped emotions for that user.
- * Responsive and accessible for Dashboard page, visually matches sidebar widgets.
+ * CalendarWithEmotions: Renders a month-view calendar with per-day emotion tracking.
+ * Allows the user to select a day, then pick an emotion, which renders as an emoji below/beside the date number.
+ * Ensures:
+ *   - Emoji is always mapped to and rendered on the exact correct cell (no offset/next-day bug).
+ *   - Date and emoji are visually separated: date number at top, emoji always below (or beside) with spacing, no overlap.
+ *   - Calendar grid remains visually clean and responsive.
  */
-function CalendarWithEmotions({ style = {} }) {
-  const [emotions, setEmotions] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [modalOpen, setModalOpen] = useState(false);
-  const [chosen, setChosen] = useState(""); // Chosen emoji for today
-  const user = getCurrentUser();
+export default function CalendarWithEmotions({
+  year,
+  month, // 0-based (January = 0)
+  initialEmotions = {},
+}) {
+  // Today's date for highlight
   const today = new Date();
-  const year = today.getFullYear();
-  const month = today.getMonth();
-  const { first, numDays } = getMonthDays(year, month);
+  const thisMonth = typeof month === "number" ? month : today.getMonth();
+  const thisYear = year || today.getFullYear();
 
-  // Find the user's emotion map for the current month on mount/refresh.
-  // Fetch and display emotions for the user only once on mount
-  useEffect(() => {
-    if (!user) return;
-    setLoading(true);
-    setError("");
-    fetch(`/api/emotion?user_id=${user.id}`)
-      .then(r => r.ok ? r.json() : Promise.reject("API error"))
-      .then(data => {
-        if (!data.success) throw new Error("API: Not Success");
-        setEmotions(data.emotions || {});
-      })
-      .catch(() => setError("Could not load emotions"))
-      .finally(() => setLoading(false));
-  // Only fetch on mount (not on every user change)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // State: emotions per ISO date ("YYYY-MM-DD"), selected date string
+  const [emotions, setEmotions] = useState(initialEmotions);
+  const [selectedDate, setSelectedDate] = useState(null);
 
-  function handleDayClick(day) {
-    // Only today's date opens modal
-    const d = new Date(year, month, day);
-    if (
-      d.getDate() === today.getDate() &&
-      d.getMonth() === today.getMonth() &&
-      d.getFullYear() === today.getFullYear()
-    ) {
-      setModalOpen(true);
-    }
+  // Get first and last day numbers for this month
+  const firstDayObj = new Date(thisYear, thisMonth, 1);
+  const lastDayObj = new Date(thisYear, thisMonth + 1, 0);
+  
+  // For accessibility/string comparison
+  const dateToString = (d) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+      d.getDate()
+    ).padStart(2, "0")}`;
+
+  // Fill array of all days in this month [{date: Date, iso: 'YYYY-MM-DD'}, ...]
+  const days = [];
+  for (let n = 1; n <= lastDayObj.getDate(); n++) {
+    const date = new Date(thisYear, thisMonth, n);
+    days.push({ date, iso: dateToString(date) });
   }
 
-  // PUBLIC_INTERFACE
-  function handleSaveEmotion(emoji) {
-    // 1. Save new emotion via API
-    // 2. After a successful POST, re-fetch the full emotion dataset and update in place (showing loader only within the modal)
-    if (!user) return;
-    setLoading(true);
-    fetch("/api/emotion", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        user_id: user.id,
-        date: toISO(today),
-        emotion: emoji
-      })
-    })
-      .then(r => r.ok ? r.json() : Promise.reject("API error"))
-      .then(data => {
-        setModalOpen(false);
-        setChosen(emoji);
+  // Calendar grid info: get which weekday the first date falls on, so the grid is aligned
+  const firstWeekday = firstDayObj.getDay();
 
-        // Immediately re-fetch emotion data for UI update; keep calendar visible
-        fetch(`/api/emotion?user_id=${user.id}`)
-          .then(r => r.ok ? r.json() : Promise.reject("API error"))
-          .then(data => {
-            if (!data.success) throw new Error("API: Not Success");
-            setEmotions(data.emotions || {});
-          })
-          .catch(() => setError("Could not load emotions"))
-          .finally(() => setLoading(false));
-      })
-      .catch(() => {
-        setError("Could not save emotion. Try again.");
-        setLoading(false);
-      });
+  // To keep grid aligned, fill blank days at start (if month doesn't start on Sunday)
+  const paddedDays = [
+    ...Array(firstWeekday).fill(null),
+    ...days,
+  ];
+
+  // Add trailing blanks for last week if needed for 6-row grid
+  while (paddedDays.length % 7 !== 0) paddedDays.push(null);
+
+  // Clicking a date - select it (for picking emotion)
+  function handleDateClick(iso) {
+    setSelectedDate(iso);
   }
 
-  // Responsive: grid
-  // Find what ISO dates to render (all days in this month)
-  // Calendar always starts from Sunday
-  const firstDayIdx = first.getDay();
-  const gridCells = [];
-  for (let i = 0; i < firstDayIdx; ++i) gridCells.push(null);
-  for (let d = 1; d <= numDays; ++d) gridCells.push(new Date(year, month, d));
-  while (gridCells.length % 7 !== 0) gridCells.push(null);
-
-  // Pastel accent for today’s date, subtle color for the rest
-  function cellStyle(d, idx) {
-    if (!d) 
-      return { background: "none", border: "none" };
-    if (
-      d.getDate() === today.getDate() &&
-      d.getMonth() === today.getMonth() &&
-      d.getFullYear() === today.getFullYear()
-    ) {
-      return {
-        background: pastelPalette[2],
-        border: `2.5px solid ${pastelPalette[3]}`,
-        color: "#32204a",
-        fontWeight: 700,
-        cursor: "pointer",
-        boxShadow: "0 2px 10px #eadafc55"
-      };
-    }
-    return {
-      background: (idx % 2 === 0 ? pastelPalette[0] : pastelPalette[1]),
-      border: "1px solid #F3E6FC",
-      color: "#574d82",
-      fontWeight: 500
-    };
+  // Choose an emotion for selected date
+  function handleEmotionSelect(emotion) {
+    if (!selectedDate) return;
+    setEmotions((em) => ({
+      ...em,
+      [selectedDate]: emotion,
+    }));
+    setSelectedDate(null); // Optionally, deselect after picking
   }
 
-  // Responsive - maxWidth 100%, grid, padding
-  return (
-    <section
-      aria-label="Monthly Emotion Calendar"
-      style={{
-        ...style,
-        background: "rgba(255,255,255,0.98)",
-        borderRadius: 22,
-        boxShadow: "0 2px 12px rgba(104,127,229,0.09)",
-        padding: "20px 12px 18px 12px",
-        width: "100%",
-        maxWidth: 488,
-        minWidth: 0,
-        transition: "box-shadow 0.2s, padding 0.15s",
-        margin: "0 auto"
-      }}
-    >
-      {/* Header */}
-      <div style={{
-        width: "100%", display: "flex", alignItems: "center",
-        justifyContent: "space-between", marginBottom: 7, gap: 4
+  // Render emotion picker only if a date is selected
+  function EmotionPicker({ onPick }) {
+    return (
+      <div className="emotion-picker" style={{
+        display: "flex", gap: 10, marginTop: 8, flexWrap: "wrap",
+        justifyContent: "center", background: "#fff", borderRadius: 10,
+        boxShadow: "0 2px 9px rgba(104,127,229,0.09)", padding: "10px 10px 6px 13px"
       }}>
-        <span style={{
-          fontWeight: 700, color: pastelPalette[3],
-          fontSize: "1.25rem", letterSpacing: 0.02,
-        }}>
-            {today.toLocaleString("default", { month: "long", year: "numeric" })}
-        </span>
-        <span style={{ fontSize: "1.03em", color: "#8D76A7", fontWeight: 500 }}>
-          Track your mood
-        </span>
-      </div>
-      {/* Week headers */}
-      <div style={{
-        display: "grid", gridTemplateColumns: "repeat(7, 1fr)",
-        fontWeight: 700, color: "#af8edc", fontSize: "1.09em",
-        marginBottom: 0, paddingLeft: 3, paddingRight: 3
-      }}>
-        {["S", "M", "T", "W", "T", "F", "S"].map(wd => (
-          <div key={wd} style={{ textAlign: "center" }}>{wd}</div>
+        {Object.entries(EMOTION_EMOJIS).map(([k, v]) => (
+          <button
+            key={k}
+            style={{
+              fontSize: "1.35rem",
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              transition: "transform .08s",
+              outline: "none",
+            }}
+            aria-label={k}
+            onClick={() => onPick(k)}
+            tabIndex={0}
+          >{v}</button>
         ))}
       </div>
-      {/* Calendar grid */}
+    );
+  }
+
+  // Calculate calendar grid styles for responsiveness
+  const gridTemplate =
+    "repeat(7, minmax(0, 1fr))";
+
+  // Final render
+  return (
+    <div className="calendar-emotions-root" style={{
+      maxWidth: 420, background: "#faf7ff", borderRadius: 18,
+      boxShadow: "0 2px 13px rgba(162,97,255,0.06)",
+      padding: 18, margin: "0 auto", fontFamily: "inherit",
+    }}>
       <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(7, 1fr)",
-        gap: 3,
-        marginTop: 6,
-        marginBottom: 0
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        marginBottom: 8, gap: 8
       }}>
-        {gridCells.map((d, idx) => {
-          const iso = d ? toISO(d) : null;
+        <h2 style={{margin:0, fontSize: "1.20rem", fontWeight: 700, color: "#462381", letterSpacing: 0.02}}>
+          {firstDayObj.toLocaleString("default", { month: "long" })} {thisYear}
+        </h2>
+      </div>
+      <div
+        className="calendar-grid"
+        style={{
+          display: "grid",
+          gridTemplateColumns: gridTemplate,
+          gap: 2,
+          marginBottom: 8,
+          marginTop: 3
+        }}>
+        {WEEKDAYS.map((wd) => (
+          <div
+            key={wd}
+            style={{
+              color: "#9965C7",
+              fontWeight: 600,
+              fontSize: "0.97rem",
+              padding: "2px 0 4px 0",
+              textAlign: "center",
+              letterSpacing: 0,
+              userSelect: "none"
+            }}
+          >
+            {wd}
+          </div>
+        ))}
+        {paddedDays.map((info, idx) => {
+          if (!info)
+            return (
+              <div
+                key={`blank-${idx}`}
+                aria-hidden="true"
+                style={{
+                  background: "none",
+                  minHeight: 48,
+                  minWidth: 0,
+                }}
+              />
+            );
+          const { date, iso } = info;
           const isToday =
-            d &&
-            d.getDate() === today.getDate() &&
-            d.getMonth() === today.getMonth() &&
-            d.getFullYear() === today.getFullYear();
+            dateToString(today) === iso &&
+            today.getMonth() === date.getMonth() &&
+            today.getFullYear() === date.getFullYear();
+          const isSelected = iso === selectedDate;
+          const hasEmotion = !!emotions[iso];
           return (
             <div
-              key={idx}
+              key={iso}
+              className="calendar-day-cell"
+              tabIndex={0}
+              onClick={() => handleDateClick(iso)}
               style={{
-                ...cellStyle(d, idx),
+                cursor: "pointer",
+                background: isSelected
+                  ? "#EEF1F5"
+                  : hasEmotion
+                  ? "#f9f6ff"
+                  : "#fff",
+                borderRadius: 12,
+                border: isToday
+                  ? "2.2px solid #9B69F2"
+                  : "1.2px solid #e9e6f9",
+                boxShadow: hasEmotion
+                  ? "0 3px 16px rgba(162,97,255,0.07)"
+                  : "none",
+                minHeight: 52,
+                aspectRatio: "0.82",
+                overflow: "hidden",
+                padding: 0,
                 position: "relative",
-                aspectRatio: "1/1",
-                minHeight: 0,
-                minWidth: 0,
-                borderRadius: 16,
-                userSelect: isToday ? "auto" : "none",
-                cursor: isToday ? "pointer" : "default",
-                transition: "background 0.16s, border 0.15s"
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "flex-start",
+                transition: "background .13s"
               }}
-              tabIndex={isToday ? 0 : -1}
-              aria-label={
-                d
-                  ? isToday
-                    ? "Today: select or edit your emotion"
-                    : "Day " + d.getDate() + (emotions && emotions[iso] ? `, emotion: ${emotions[iso]}` : "")
-                  : ""
-              }
-              onClick={isToday ? () => handleDayClick(d.getDate()) : undefined}
+              aria-label={`Day ${date.getDate()}${
+                hasEmotion ? ", emotion selected" : ""
+              }`}
             >
-              {/* Day number */}
-              {d && (
-                <span
+              {/* Date number at top */}
+              <div
+                style={{
+                  fontWeight: 700,
+                  fontSize: "1.05rem",
+                  color: isToday
+                    ? "#462381"
+                    : hasEmotion
+                    ? "#4B267E"
+                    : "#645f74",
+                  marginTop: 6,
+                  marginBottom: hasEmotion ? 0 : 12,
+                  zIndex: 2,
+                  letterSpacing: 0.01,
+                  lineHeight: 1.1,
+                  textAlign: "center",
+                  userSelect: "none",
+                }}
+              >
+                {date.getDate()}
+              </div>
+              {/* Emoji below date (always visible if set, no overlap) */}
+              {hasEmotion && (
+                <div
                   style={{
-                    fontWeight: isToday ? 800 : 600,
-                    fontSize: "1.07em",
-                    letterSpacing: 0,
-                    color: isToday ? "#2d1157" : "#6E609A",
-                    marginBottom: 2
+                    fontSize: "1.55rem",
+                    marginTop: 1,
+                    marginBottom: 0,
+                    lineHeight: "1.15",
+                    zIndex: 1,
+                    textAlign: "center",
+                    whiteSpace: "nowrap",
+                    userSelect: "none",
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minHeight: 24,
                   }}
+                  aria-label={emotions[iso]}
+                  title={emotions[iso]}
                 >
-                  {d.getDate()}
-                </span>
+                  {EMOTION_EMOJIS[emotions[iso]] || "❓"}
+                </div>
               )}
-              {/* Emoji overlay if set */}
-              {emotions && emotions[iso] && (
-                <span
-                  style={{
-                    position: "absolute",
-                    bottom: 5, left: "49%",
-                    transform: "translateX(-50%)",
-                    fontSize: isToday ? 26 : 23,
-                    filter: isToday ? "drop-shadow(0 1px 4px #d2bafc66)" : "none",
-                    cursor: isToday ? "pointer" : "default",
-                    pointerEvents: "none"
-                  }}
-                  aria-label={`Emotion: ${emotions[iso]}`}
-                  role="img"
-                >
-                  {emotions[iso]}
-                </span>
+              {/* Visual feedback for selected day but no emoji: show subtle placeholder area */}
+              {!hasEmotion && isSelected && (
+                <div style={{ minHeight: 26, marginTop: 3 }} />
               )}
             </div>
           );
         })}
       </div>
-      {/* Modal to pick emoji (for today) */}
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)}>
-        <h2 style={{ fontWeight: 700, color: pastelPalette[3], fontSize: "1.22rem", margin: 0, textAlign: "center" }}>
-          How are you feeling today? <span style={{ fontSize: 16 }}>Pick one:</span>
-        </h2>
-        <div
-          style={{
-            marginTop: 17,
-            display: "grid",
-            gridTemplateColumns: "repeat(7, 1fr)",
-            gap: 6,
-            maxHeight: 222,
-            overflowY: "auto",
-            borderRadius: 10,
-            background: "#F5F2FF",
-            padding: "10px 0"
-          }}
-        >
-          {EMOTION_EMOJIS.map(emoji => (
-            <button
-              key={emoji}
-              style={{
-                fontSize: 24,
-                padding: "7px 0",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                borderRadius: 8,
-                outline: "none",
-                transition: "background .13s",
-                filter: chosen === emoji ? "contrast(1.2)" : "none",
-                boxShadow: chosen === emoji ? "0 2px 8px #f3e9fd99" : "none"
-              }}
-              title={emoji}
-              tabIndex={0}
-              onClick={() => handleSaveEmotion(emoji)}
-              aria-label={`Select emotion ${emoji}`}
-            >
-              {emoji}
-            </button>
-          ))}
-        </div>
-        <div style={{ marginTop: 16, textAlign: "center" }}>
-          <button
-            type="button"
-            style={{
-              background: pastelPalette[3],
-              color: "#fff",
-              fontWeight: 700,
-              borderRadius: 18,
-              border: "none",
-              padding: "7.5px 31px",
-              fontSize: "1.06em",
-              marginTop: 6,
-              cursor: "pointer",
-              boxShadow: "0 1.5px 7px #d5d3e6cc",
-              transition: "background .15s"
-            }}
-            onClick={() => setModalOpen(false)}
-          >
-            Cancel
-          </button>
-        </div>
-      </Modal>
-      {/* Loading/Error */}
-      {loading && (
-        <div style={{
-          textAlign: "center", color: "#7766A6",
-          marginTop: 11, fontSize: "1em"
-        }}>
-          Loading...
-        </div>
+      {/* Emotion Picker Pop-up */}
+      {selectedDate && (
+        <EmotionPicker onPick={handleEmotionSelect} />
       )}
-      {error && (
-        <div style={{
-          textAlign: "center", color: "#f56d7b",
-          marginTop: 8, fontWeight: 600
-        }}>
-          {error}
-        </div>
-      )}
-    </section>
+    </div>
   );
 }
-
-export default CalendarWithEmotions;
-
