@@ -15,6 +15,8 @@ const MONTH_NAMES = [
 const EMOJI_OPTIONS = [
   "😄", "😊", "😐", "😟", "😢", "🥳", "😴", "💪", "😭", "😅", "🫤", "😜"
 ];
+// Weekday header labels, always Sunday-first
+const WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function pad(num) {
   return num < 10 ? "0" + num : "" + num;
@@ -435,7 +437,7 @@ function CalendarWithEmotions() {
           marginBottom: 4,
         }}
       >
-        ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(wd => (
+        {WEEKDAY_NAMES.map(wd => (
           <div
             key={wd}
             style={{
@@ -450,7 +452,7 @@ function CalendarWithEmotions() {
           >
             {wd}
           </div>
-        ))
+        ))}
       </div>
       {/* Calendar grid */}
       <div
