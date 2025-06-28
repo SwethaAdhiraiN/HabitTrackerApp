@@ -1,82 +1,69 @@
-import React, { useEffect, useState } from "react";
-import styles from "./styles/Dashboard.module.css";
+import React from "react";
 
 /**
  * PUBLIC_INTERFACE
- * QuoteOfTheDayWidget displays a motivational quote and author in a pastel, centered card.
- * Quote and author are fetched from the local database. Restores display after UI/style refactor.
+ * QuoteOfTheDayWidget displays the quote text and author in a pastel card styled to match the dashboard.
+ * Ensures highly visible content with dashboard-pastel backgrounds and readable font/colors.
+ * 
+ * Props:
+ *   quoteObj: {text: string, author: string}
  */
-function QuoteOfTheDayWidget() {
-  const [quote, setQuote] = useState("");
-  const [author, setAuthor] = useState("");
+function QuoteOfTheDayWidget({ quoteObj }) {
+  // If no quoteObj provided, show default/fallback
+  if (!quoteObj)
+    quoteObj = {
+      text: "Start where you are. Use what you have. Do what you can.",
+      author: "Arthur Ashe",
+    };
 
-  useEffect(() => {
-    // Simulate fetch - in real app, fetch from backend
-    fetch("/database/quotes.json")
-      .then((resp) => resp.json())
-      .then((quotesArr) => {
-        const idx = Math.floor(Math.random() * quotesArr.length);
-        setQuote(quotesArr[idx]?.quote ?? "");
-        setAuthor(quotesArr[idx]?.author ?? "");
-      })
-      .catch(() => {
-        setQuote("Start where you are. Use what you have. Do what you can.");
-        setAuthor("Arthur Ashe");
-      });
-  }, []);
-
-  // Fix: Ensure the container and text are visible even if quote/author are missing, and preserve pastel UI
+  // Restored: Proper return and visually prominent pastel-styled card
   return (
     <section
-      className={styles.quoteWidgetContainer}
       style={{
-        background: "rgba(255,255,255,0.96)",
-        borderRadius: 18,
-        boxShadow: "0 2px 12px rgba(123,97,255,0.11)",
-        padding: "28px 18px 24px 18px",
-        marginBottom: 24,
         width: "100%",
-        maxWidth: 390,
+        background: "linear-gradient(90deg, #F3E7FA 0%, #DCF2FF 100%)",
+        borderRadius: 18,
+        boxShadow: "0 2px 12px rgba(135,105,255,0.09)",
+        padding: "25px 20px 20px 20px",
+        margin: "0 0 24px 0",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        minHeight: quote || author ? 98 : 50,
+        minHeight: 90,
+        boxSizing: "border-box",
       }}
     >
       <div
         style={{
           fontSize: "1.22rem",
-          color: "var(--ht-primary-text, #3B1877)",
+          color: "var(--ht-primary-text, #37265F)",
           fontWeight: 700,
           textAlign: "center",
-          lineHeight: 1.36,
+          lineHeight: 1.4,
           letterSpacing: 0.04,
-          marginBottom: 8,
-          maxWidth: 330,
+          marginBottom: 10,
+          maxWidth: 310,
           fontFamily: '"Helvetica Neue", Arial, sans-serif',
-          textShadow: "0 3px 12px rgba(104,127,229,0.08)",
-          opacity: quote ? 1 : 0.7,
-          minHeight: 30,
+          textShadow: "0 2px 14px rgba(135,105,255,0.07)",
         }}
-        data-testid="quote-text"
       >
-        {quote ? `“${quote}”` : "No quote available."}
+        {"\u201C"}
+        {quoteObj.text}
+        {"\u201D"}
       </div>
       <div
         style={{
-          fontSize: "1.05rem",
-          color: "var(--ht-primary, #947AE1)",
+          fontSize: "1.04rem",
+          color: "var(--ht-primary, #976EDE)",
           fontWeight: 600,
-          marginTop: 3,
+          marginTop: 2,
           textAlign: "center",
-          letterSpacing: 0.007,
-          opacity: author ? 1 : 0.8,
-          minHeight: 22,
+          fontFamily: '"Helvetica Neue", Arial, sans-serif',
+          letterSpacing: 0.01,
         }}
-        data-testid="quote-author"
       >
-        {author ? `— ${author}` : ""}
+        — {quoteObj.author}
       </div>
     </section>
   );
