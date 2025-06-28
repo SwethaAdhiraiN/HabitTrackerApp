@@ -1,95 +1,90 @@
-import React, { useState, useEffect, useRef } from "react";
-import axios from "axios";
+import React, { useEffect, useState } from "react";
 
 /**
  * PUBLIC_INTERFACE
- * QuoteOfTheDayWidget (dashboard) - Shows a random quote from backend, refreshing every 20 seconds.
- * No timer label or explanation is present, just quote and author.
+ * QuoteOfTheDayWidget visually centers and styles the daily quote box for the dashboard.
+ * The quote and author are centered, well-padded, pastel-themed, and the container
+ * aligns visually with Dashboard sections, using a harmonious color and shadow.
  */
 function QuoteOfTheDayWidget() {
-  const [quote, setQuote] = useState({ text: "", author: "" });
-  // To avoid unwanted double intervals
-  const intervalRef = useRef(null);
-
-  // Fetch random quote from backend
-  const fetchQuote = async () => {
-    try {
-      // Correct endpoint: backend's /api/quote for random quote delivery
-      const response = await axios.get("/api/quote");
-      const data = response.data;
-      // Backend returns { success, quote, author } on success
-      if (data && data.success && typeof data.quote === "string" && data.author) {
-        setQuote({ text: data.quote, author: data.author });
-      } else {
-        // fallback for unexpected structure
-        setQuote({
-          text: "Start each day with a grateful heart.",
-          author: "Unknown",
-        });
-      }
-    } catch (e) {
-      // Fallback or silent error
-      setQuote({
-        text: "Start each day with a grateful heart.",
-        author: "Unknown",
-      });
-    }
-  };
+  const [quote, setQuote] = useState(null);
 
   useEffect(() => {
-    fetchQuote();
-    // Set interval for refresh
-    intervalRef.current = setInterval(fetchQuote, 20000);
-    return () => clearInterval(intervalRef.current);
+    fetch("/api/quote")
+      .then((res) => res.json())
+      .then((data) => setQuote(data));
   }, []);
 
+  // Pastel background and styling to match Dashboard sections
   return (
-    <div
+    <section
       style={{
         width: "100%",
-        background: "rgba(255,255,255,0.98)",
-        borderRadius: 18,
-        boxShadow: "0 2px 12px rgba(123,97,255,0.10)",
-        padding: "28px 18px 26px 18px",
-        marginBottom: 24,
+        maxWidth: 520,
+        margin: "0 auto 26px auto",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center",
-        minHeight: 78,
-        transition: "all 0.3s cubic-bezier(.4,1.1,.8,1)", // For visual seamlessness
       }}
     >
       <div
         style={{
-          fontSize: "1.24rem",
-          color: "var(--ht-primary-text)",
-          fontWeight: 700,
-          textAlign: "center",
-          lineHeight: 1.36,
-          maxWidth: 280,
-          fontFamily: '"Helvetica Neue", Arial, sans-serif',
-          textShadow: "0 3px 14px rgba(104,127,229,0.07)",
-          transition: "color 0.18s cubic-bezier(.2,.7,.5,1)",
+          background: "linear-gradient(125deg, #F9F7FD 65%, #FCE7F3 100%)",
+          borderRadius: 20,
+          boxShadow: "0 2px 14px rgba(123,97,255,0.10)",
+          padding: "32px 34px 28px 34px",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          minWidth: 0,
+          width: "100%",
         }}
       >
-        {quote.text && `"${quote.text}"`}
+        {quote ? (
+          <>
+            <div
+              style={{
+                fontSize: "1.24rem",
+                color: "var(--ht-primary-text, #44216C)",
+                fontWeight: 700,
+                textAlign: "center",
+                lineHeight: 1.38,
+                marginBottom: 10,
+                letterSpacing: 0.02,
+                textShadow: "0 3px 14px rgba(104,127,229,0.09)",
+                maxWidth: 380,
+                fontFamily: '"Helvetica Neue", Arial, sans-serif',
+              }}
+            >
+              “{quote.text}”
+            </div>
+            <div
+              style={{
+                fontSize: "1.04rem",
+                color: "var(--ht-primary, #A456EB)",
+                fontWeight: 600,
+                textAlign: "center",
+                marginTop: 3,
+                letterSpacing: 0.01,
+              }}
+            >
+              — {quote.author}
+            </div>
+          </>
+        ) : (
+          <div
+            style={{
+              color: "#B2A6E3",
+              fontSize: "1.09rem",
+              fontStyle: "italic",
+              textAlign: "center",
+            }}
+          >
+            Loading quote...
+          </div>
+        )}
       </div>
-      {quote.author && (
-        <div
-          style={{
-            fontSize: "1.05rem",
-            color: "var(--ht-primary)",
-            fontWeight: 600,
-            marginTop: 8,
-            textAlign: "center",
-            transition: "color 0.18s cubic-bezier(.2,.7,.5,1)",
-          }}
-        >
-          — {quote.author}
-        </div>
-      )}
-    </div>
+    </section>
   );
 }
 
