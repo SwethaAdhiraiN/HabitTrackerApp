@@ -1,39 +1,68 @@
+/* THEME: HabitTrackerApp Previous Version (pre-redesign)
+   Simple, clear palette and CSS variables for baseline UI
+*/
+
 :root {
-  /* Primary and secondary brand/palette */
-  --ht-primary: #687FE5;
-  --ht-primary-light: #A7BFFE;
-  --ht-primary-dark: #3B1877;
-  --ht-secondary: #FFD3E8;
-  --ht-accent-pink: #FBA7C5;
-  --ht-accent-purple: #C48DDC;
-  --ht-accent-green: #47DB7F;
-  --ht-accent-blue: #53A9F5;
+  --ht-background: #f5f6fa;
+  --ht-surface: #fff;
+  --ht-primary: #8a5dfb;
+  --ht-primary-text: #45306e;
+  --ht-secondary: #ece9f9;
+  --ht-secondary-text: #7c58c5;
+  --ht-accent: #53a9f5;
+  --ht-success: #40c282;
+  --ht-warning: #ffe484;
+  --ht-error: #e75874;
 
-  --ht-surface: #F7F6FD;
-  --ht-surface-card: #FFFFFFEE;
-  --ht-surface-gradient: linear-gradient(135deg, #FFFFFFEE 70%, #FCE7F3 100%);
-  --ht-surface-dark: #E7E6F3;
-  --ht-bg-gradient: linear-gradient(120deg, #EEE5FA 0%, #FDE7F3 100%);
+  --ht-radius: 12px;
+  --ht-shadow: 0 2px 7px rgba(155, 139, 255, 0.09);
 
-  --ht-shadow-1: 0 2.5px 14px 0 rgba(167,140,255,0.13);
-  --ht-shadow-2: 0 4px 20px 0 rgba(167,140,255,0.12), 0 1.5px 3px rgba(104,127,229,0.07);
-
-  --ht-primary-text: #3B1877;
-  --ht-secondary-text: #9087AB;
-
-  --ht-radius: 22px;
-  --ht-radius-card: 22px;
-  --ht-radius-avatar: 16px;
-
-  /* Typography */
-  --ht-font: 'Nunito', 'Helvetica Neue', Arial, sans-serif;
-
-  /* Spacing helpers */
-  --ht-card-padding: 28px 23px 24px 23px;
-  --ht-gap-main: 26px;
+  --font-main: 'Segoe UI', Arial, sans-serif;
+  --ht-header-font: 700;
 }
 
 body {
-  background: var(--ht-bg-gradient);
-  font-family: var(--ht-font);
+  font-family: var(--font-main);
+  background: var(--ht-background);
+  color: var(--ht-primary-text);
+  margin: 0;
+  padding: 0;
+}
+
+h1, h2, h3, h4 {
+  color: var(--ht-primary-text);
+  font-family: var(--font-main);
+  font-weight: var(--ht-header-font);
+}
+
+button {
+  background: var(--ht-primary);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 0.52rem 1.24rem;
+  font-weight: 700;
+  font-size: 1.04rem;
+  margin: 6px 0;
+  cursor: pointer;
+  transition: background 0.16s;
+}
+
+button:hover {
+  background: #6a42b6;
+}
+
+a {
+  color: var(--ht-primary);
+  text-decoration: none;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  background: #ece9f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d9cfff;
+  border-radius: 4px;
 }

@@ -1,78 +1,68 @@
-.dashboard-root {
-  width: 100vw;
+.dashboardContainer {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 40px 18px 28px 18px;
+  background: var(--ht-background, #f5f6fa);
   min-height: 100vh;
-  background: linear-gradient(120deg, #EEE5FA 0%, #FDE7F3 100%);
-  margin: 0;
-  padding: 0;
-  font-family: 'Nunito', 'Helvetica Neue', Arial, sans-serif;
+  font-family: 'Segoe UI', Arial, sans-serif;
 }
 
-.dashboard-content {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 26px;
-  align-items: stretch;
-  margin-top: 6px;
-  margin-bottom: 10px;
+.header {
+  margin-bottom: 28px;
+  text-align: center;
 }
 
-.dashboard-cards-left,
-.dashboard-cards-right {
+.mainContent {
+  width: 100%;
+}
+
+.section {
+  background: #fff;
+  margin-bottom: 22px;
+  border-radius: 16px;
+  box-shadow: 0 2px 7px rgba(155, 139, 255, 0.08);
+  padding: 24px;
+}
+
+.statsGrid {
   display: flex;
-  flex-direction: column;
-  gap: 22px;
-}
-
-.dashboard-card {
-  background: linear-gradient(135deg, #FFFFFFEE 75%, #FCE7F3 100%);
-  border-radius: 22px;
-  box-shadow: 0 4px 20px 0 rgba(167,140,255,0.11), 0 1.5px 3px rgba(104,127,229,0.07);
-  padding: 28px 23px 24px 23px;
-  margin-bottom: 0;
-  min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
+  gap: 18px;
+  margin-top: 15px;
   justify-content: center;
-  transition: box-shadow 0.22s, transform 0.14s;
 }
 
-/* Responsive for different breakpoints */
-@media (max-width: 900px) {
-  .dashboard-content {
-    grid-template-columns: 1fr;
-    gap: 22px;
-  }
+.statCard {
+  background: #ece9f9;
+  padding: 18px 16px 13px 16px;
+  border-radius: 12px;
+  min-width: 82px;
+  text-align: center;
+  box-shadow: 0 2px 7px rgba(158, 116, 255, 0.07);
 }
 
-@media (max-width: 700px) {
-  .dashboard-content {
-    grid-template-columns: 1fr;
-    gap: 18px;
-    padding: 0 !important;
-  }
-
-  .dashboard-cards-left,
-  .dashboard-cards-right {
-    gap: 16px;
-  }
-}
-
-@media (max-width: 450px) {
-  .dashboard-root {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-  }
-}
-
-.dashboard-section-title {
-  font-size: 1.35rem;
+.statNumber {
+  display: block;
+  font-size: 1.55rem;
   font-weight: 700;
-  color: #3B1877;
-  margin-bottom: 12px;
+  color: #8a5dfb;
+  margin-bottom: 2px;
 }
 
-.dashboard-subtle {
-  color: var(--ht-secondary-text);
+.statLabel {
+  display: block;
+  font-size: 0.98rem;
+  color: #444466;
+  letter-spacing: 0.01em;
+}
+
+.recentList {
+  margin: 13px 0 0 12px;
+  padding-left: 0;
+  color: #6b4485;
+  font-size: 1.05rem;
+  list-style: decimal;
+}
+
+.recentList li {
+  margin-bottom: 3px;
 }
