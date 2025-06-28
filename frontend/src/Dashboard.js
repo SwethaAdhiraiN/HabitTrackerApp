@@ -1,6 +1,404 @@
 import React, { useEffect, useState } from "react";
 import styles from "./styles/Dashboard.module.css";
 
+// PUBLIC_INTERFACE
+/**
+ * Dashboard: Renders the dashboard per the pastel reference image, showing
+ * authenticated user info, habits, and stats. No static placeholders for user.
+ *
+ * All structure, colors, font, and element order matches the attached reference image.
+ * User name and email are fetched post-login from /api/profile.
+ */
+
+function fetchUserProfile() {
+  // Fetches current user profile (assumes /api/profile returns JSON {name, email, join_date})
+  return fetch("/api/profile", { credentials: "include" })
+    .then((res) => (res.ok ? res.json() : null))
+    .catch(() => null);
+}
+
+// Simple icon SVGs for habits
+const habitIcons = {
+  water: (
+    <span
+      style={{
+        background: "#E6F3FE",
+        borderRadius: 8,
+        width: 28,
+        height: 28,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        marginRight: 8,
+      }}
+    >
+      <svg width="18" height="18" viewBox="0 0 18 18">
+        <path
+          d="M9 2.5C8.6 3 4.7 7.6 4 10.1c-.6 1.8-.3 4 2 5a4.4 4.4 0 004.8-.8c1.7-1.4 2-3.4 1.5-5.2C11.7 5.7 9 2.5 9 2.5z"
+          fill="#53A9F5"
+        />
+      </svg>
+    </span>
+  ),
+  read: (
+    <span
+      style={{
+        background: "#F2EAFE",
+        borderRadius: 8,
+        width: 28,
+        height: 28,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        marginRight: 8,
+      }}
+    >
+      <svg width="18" height="18" viewBox="0 0 18 18">
+        <rect x="3" y="4" width="12" height="11" rx="2" fill="#8D85DC" />
+        <rect x="6" y="7" width="6" height="2" rx="1" fill="#fff" />
+      </svg>
+    </span>
+  ),
+  exercise: (
+    <span
+      style={{
+        background: "#FFE6EE",
+        borderRadius: 8,
+        width: 28,
+        height: 28,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        marginRight: 8,
+      }}
+    >
+      <svg width="16" height="16" viewBox="0 0 16 16">
+        <circle cx="8" cy="8" r="7" fill="#F98AAD" />
+        <rect x="6.8" y="4" width="2.4" height="8" rx="1.1" fill="#fff" />
+      </svg>
+    </span>
+  ),
+};
+
+function CheckRow({ total = 7, filled = 5 }) {
+  // Render row of checks/circles (green = checked, soft grey = empty)
+  return (
+    <span style={{ display: "inline-flex", gap: 6, verticalAlign: "middle" }}>
+      {Array(total)
+        .fill(0)
+        .map((_, idx) =>
+          idx < filled ? (
+            <span
+              key={idx}
+              style={{
+                display: "inline-flex",
+                width: 16,
+                height: 16,
+                borderRadius: "50%",
+                background: "#47DB7F",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 1px 2px #CDE7DC60",
+              }}
+            >
+              <svg width="10" height="10" viewBox="0 0 12 12">
+                <path d="M3 7l2 2 4-4" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round" />
+              </svg>
+            </span>
+          ) : (
+            <span
+              key={idx}
+              style={{
+                display: "inline-flex",
+                width: 16,
+                height: 16,
+                borderRadius: "50%",
+                background: "#EEE7F3",
+                border: "1.3px solid #E2DDE4",
+              }}
+            />
+          )
+        )}
+    </span>
+  );
+}
+
+function CalendarIcon() {
+  // Reference image calendar illustration
+  return (
+    <svg width="54" height="54" viewBox="0 0 54 54" fill="none">
+      <rect x="8" y="14" width="38" height="28" rx="8" fill="#EBD6FB" />
+      <rect x="15" y="22" width="24" height="16" rx="5" fill="#fff" />
+      <rect x="20.2" y="28.5" width="7.7" height="7.2" rx="1.9" fill="#687FE5" />
+      <path d="M27 35l4 5 5-5" stroke="#47DB7F" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+      <circle cx="17" cy="14" r="2" fill="#687FE5" />
+      <circle cx="37" cy="14" r="2" fill="#687FE5" />
+    </svg>
+  );
+}
+
+function Dashboard() {
+  const [user, setUser] = useState({ name: "", email: "", join_date: "" });
+
+  // These would be dynamic, but for illustration we use static structure with dynamic code/props
+  const habits = [
+    { name: "Drink water", icon: "water", checked: 6 },
+    { name: "Read", icon: "read", checked: 4 },
+    { name: "Exercise", icon: "exercise", checked: 2 },
+  ];
+
+  useEffect(() => {
+    fetchUserProfile().then((data) => {
+      if (data && data.email)
+        setUser(data);
+    });
+  }, []);
+
+  // Main rendering matches the image:
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        minWidth: "100vw",
+        background: "linear-gradient(120deg, #EBD6FB 0%, #FEEBF6 60%, #FCD8CD 100%)",
+        fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif",
+        padding: 0,
+        margin: 0,
+      }}
+    >
+      <div
+        style={{
+          maxWidth: 360,
+          margin: "0 auto",
+          paddingTop: 28,
+          paddingBottom: 32,
+        }}
+      >
+        <div style={{ marginBottom: 0 }}>
+          <div
+            style={{
+              fontSize: "2.2rem",
+              fontWeight: 700,
+              color: "#3B1877",
+              letterSpacing: -1,
+              marginBottom: 4,
+              textAlign: "left",
+              fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif",
+              lineHeight: 1.06,
+            }}
+          >
+            Habit Tracker
+          </div>
+          <div
+            style={{
+              color: "#7E6E9B",
+              fontSize: "1.06rem",
+              fontWeight: 400,
+              marginBottom: 22,
+              textAlign: "left",
+              lineHeight: 1.28,
+            }}
+          >
+            Build better habits easily
+          </div>
+          <div style={{ display: "flex", alignItems: "center", marginBottom: 19 }}>
+            <span
+              style={{
+                background: "#EBD6FB",
+                color: "#5647D3",
+                fontSize: "1.05rem",
+                fontWeight: 600,
+                borderRadius: 20,
+                padding: "5.5px 22px",
+                marginRight: 12,
+                boxShadow: "0 2px 10px #BEA7DE10",
+                fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif",
+              }}
+            >
+              21 days
+            </span>
+          </div>
+        </div>
+        {/* Card 1: Track your habits */}
+        <div
+          style={{
+            width: "100%",
+            background: "#fff",
+            borderRadius: 16,
+            boxShadow: "0 5px 20px rgba(104,127,229,0.06)",
+            display: "flex",
+            alignItems: "center",
+            padding: "19px 20px",
+            marginBottom: 18,
+          }}
+        >
+          <div style={{ flex: 1 }}>
+            <div
+              style={{
+                color: "#2A236C",
+                fontSize: "1.18rem",
+                fontWeight: 700,
+                marginBottom: 2,
+                letterSpacing: 0.02,
+                fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif",
+              }}
+            >
+              Track your habits
+            </div>
+            <div
+              style={{
+                color: "#7D7491",
+                fontSize: "1.01rem",
+                marginBottom: 0,
+                marginTop: 1,
+                fontWeight: 400,
+                lineHeight: 1.33,
+                letterSpacing: 0,
+                fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif",
+              }}
+            >
+              Stay accountable and motivated by tracking your habits every day.
+            </div>
+          </div>
+          <div style={{ marginLeft: 15, marginRight: -4 }}>
+            <CalendarIcon />
+          </div>
+        </div>
+        {/* Card 2: Success Rate */}
+        <div
+          style={{
+            width: "100%",
+            background: "#fff",
+            borderRadius: 16,
+            boxShadow: "0 5px 20px rgba(104,127,229,0.06)",
+            padding: "18px 20px 14px 20px",
+            marginBottom: 18,
+            display: "flex",
+            alignItems: "center",
+            gap: 16,
+          }}
+        >
+          {/* 80%: Large bold */}
+          <div style={{ flex: 0, marginRight: 12, alignSelf: "flex-start" }}>
+            <div
+              style={{
+                color: "#687FE5",
+                fontSize: "2.0rem",
+                fontWeight: 700,
+                letterSpacing: -1,
+                lineHeight: 1,
+                fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif",
+                marginBottom: 0,
+              }}
+            >
+              80%
+            </div>
+          </div>
+          {/* Success rate: right-aligned */}
+          <div style={{ flex: 1 }}>
+            <div
+              style={{
+                color: "#554699",
+                fontSize: "1.08rem",
+                fontWeight: 700,
+                marginBottom: 2,
+                lineHeight: 1.10,
+                letterSpacing: 0.01,
+                fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif",
+              }}
+            >
+              Success rate
+            </div>
+            <div
+              style={{
+                color: "#757091",
+                fontSize: "0.97rem",
+                fontWeight: 400,
+                marginTop: 3,
+                marginBottom: 0,
+                fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif",
+              }}
+            >
+              You are consistently<br />building good habits!
+            </div>
+          </div>
+        </div>
+        {/* Card 3: Habits */}
+        <div
+          style={{
+            width: "100%",
+            background: "#fff",
+            borderRadius: 16,
+            boxShadow: "0 5px 20px rgba(104,127,229,0.07)",
+            padding: "15px 20px 17px 20px",
+          }}
+        >
+          <div
+            style={{
+              color: "#423484",
+              fontSize: "1.11rem",
+              fontWeight: 700,
+              marginBottom: 12,
+              letterSpacing: 0,
+              fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif",
+            }}
+          >
+            Habits
+          </div>
+          <div>
+            {habits.map((habit, i) => (
+              <div
+                key={habit.name}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  marginBottom: i === habits.length - 1 ? 0 : 13,
+                  fontSize: "1.04rem",
+                }}
+              >
+                {habitIcons[habit.icon] || habitIcons.water}
+                <span
+                  style={{
+                    color: "#2A236C",
+                    fontWeight: 600,
+                    letterSpacing: 0,
+                    minWidth: 90,
+                  }}
+                >
+                  {habit.name}
+                </span>
+                <span style={{ marginLeft: "auto" }}>
+                  <CheckRow total={7} filled={habit.checked} />
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* User info in footer bar (if desired, or can omit) */}
+        <div
+          style={{
+            textAlign: "left",
+            fontSize: "1rem",
+            color: "#AEA3C4",
+            marginTop: 18,
+            marginBottom: 3,
+            opacity: 0.85,
+            minHeight: 23,
+          }}
+        >
+          {user.name && (
+            <>
+              <span style={{ fontSize: "1.015rem", color: "#3B1877", fontWeight: 600 }}>{user.name}</span>
+              {" "}<span style={{ color: "#B5A0E7" }}>{user.email}</span>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default Dashboard;
 /**
  * PUBLIC_INTERFACE
  * Dashboard: Main desktop-responsive dashboard page for HabitTrackerApp.
