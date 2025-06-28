@@ -1,6 +1,6 @@
 import React, { useEffect, useState, lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
-import MiniCalendarWidget from "./MiniCalendarWidget";
+
 import ProgressSnapshotWidget from "./ProgressSnapshotWidget";
 import QuoteOfTheDayWidget from "./QuoteOfTheDayWidget";
 import UserHeader from "./UserHeader";
@@ -394,14 +394,7 @@ function Dashboard() {
             {/* QuoteOfTheDayWidget already handles async + states */}
             <QuoteOfTheDayWidget />
           </DashboardCard>
-          <DashboardCard
-            loading={false}
-            error={false}
-            minHeight={110}
-            style={{marginBottom: 15}}>
-            {/* MiniCalendarWidget already handles async + states */}
-            <MiniCalendarWidget userId={userId} />
-          </DashboardCard>
+
           {/* New: Full pastel emotion calendar with emoji modal */}
           <DashboardCard
             loading={false}
