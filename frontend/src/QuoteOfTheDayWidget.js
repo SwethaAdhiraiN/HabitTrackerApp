@@ -4,7 +4,9 @@ import styles from "./styles/Dashboard.module.css";
 /**
  * PUBLIC_INTERFACE
  * QuoteOfTheDayWidget displays a motivational quote and its author, styled for Dashboard sidebar cards.
- * Fallback quote is used if none provided. Layout always centers, maximizes readability, and enforces consistent pastel theming.
+ * - Always visible, with fallback for missing quoteObj.
+ * - Pastel, soft, readable, and always centered.
+ * - ARIA and accessibility optimized for dashboard widgets.
  *
  * Props:
  *   quoteObj?: {text: string, author: string}
@@ -31,11 +33,19 @@ function QuoteOfTheDayWidget({ quoteObj }) {
       data-testid="quote-of-day-widget"
       aria-label="Quote of the Day"
       tabIndex={0}
+      role="region"
+      aria-live="polite"
+      style={{
+        // Use a gentle pastel linear-gradient overlay for maximum harmony
+        background: "linear-gradient(120deg, #F7F6FD 80%, #EBD6FB 100%)",
+        minWidth: 250,
+        overflow: "visible",
+        outline: "none",
+      }}
     >
       <div
         className={styles.quoteText}
         aria-label="Motivational Quote"
-        // Fallback foreground color guarantees visibility even if CSS variables are missing/misapplied
         style={{
           color: "var(--ht-primary-text, #26104d)",
           textShadow: "0 3px 11px rgba(104,127,229,0.11)",
@@ -46,6 +56,7 @@ function QuoteOfTheDayWidget({ quoteObj }) {
           width: "100%",
           marginBottom: 7,
           textAlign: "center",
+          letterSpacing: 0.02,
         }}
         data-testid="quote-text"
         tabIndex={0}
@@ -65,6 +76,7 @@ function QuoteOfTheDayWidget({ quoteObj }) {
           width: "100%",
           textAlign: "center",
           marginTop: 6,
+          letterSpacing: 0.009,
         }}
         data-testid="quote-author"
         tabIndex={0}

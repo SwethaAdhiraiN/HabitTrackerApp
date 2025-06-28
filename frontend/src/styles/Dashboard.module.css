@@ -4,12 +4,14 @@
    Quote of the Day Widget container pastel styling for Dashboard page.
 */
 .quoteWidgetContainer {
-  background: var(--ht-surface, #F7F6FD);
+  /* Only fallback if inline gradient is missing; let inline style win for pastel overlay */
+  background: var(--ht-surface, #F7F6FD) !important;
   border-radius: 18px;
   border: 1.6px solid #E3D3F6;
   box-shadow: 0 3px 18px 0 rgba(104,127,229,0.13), 0 2px 16px 0 rgba(123,97,255,0.07);
   padding: 24px 18px 20px 18px;
   width: 100%;
+  min-width: 250px;
   max-width: 390px;
   display: flex;
   flex-direction: column;
@@ -17,7 +19,7 @@
   justify-content: center;
   min-height: 84px;
   position: relative;
-  z-index: 12; /* move above overlapping shadows if any */
+  z-index: 24; /* ensure above dashboard cards */
   box-sizing: border-box;
   margin-bottom: 0; /* Card outer wrapper handles margin */
   transition: box-shadow 0.13s, border 0.13s;
