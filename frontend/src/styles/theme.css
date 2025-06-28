@@ -1,123 +1,39 @@
 :root {
-  /* 
-    HabitTrackerApp Global Theme Variables
-    --------------------------------------
-    These CSS variables define the foundational color palette for the application.
-
-    Palette (with intended usage roles documented):
-      --ht-bg-main:         #FEEBF6 — Main application background. Light, soft, gently pink background for maximum comfort and cleanliness.
-      --ht-bg-secondary:    #FCD8CD — Card backgrounds, secondary panels, or section highlights. Offers subtle contrast with main background.
-      --ht-surface:         #EBD6FB — Surface backgrounds for modals, overlays, selected states, and highly focused elements.
-      --ht-primary:         #687FE5 — Primary call-to-action buttons, links, icons, and active highlights to attract user focus.
-      --ht-primary-text:    #22223B — Main text color for strong readability on light backgrounds.
-      --ht-secondary-text:  #594F6D — Secondary/muted text (labels, placeholders, etc).
-      --ht-border:          #D6C7EE — Border color for soft card separation, input outlines.
-      --ht-error:           #F87A77 — For error messages or destructive actions.
-    
-    Color Accessibility Pairings:
-      - Use --ht-primary (#687FE5) for text/buttons/icons on any light background for sufficient contrast.
-      - Do not use pastel backgrounds with pastel text—use --ht-primary-text or --ht-primary for readable content.
-      - For accessible buttons: background: var(--ht-primary); color: white or var(--ht-bg-main)
-  */
-
-  --ht-bg-main: #FEEBF6;
-  --ht-bg-secondary: #FCD8CD;
-  --ht-surface: #EBD6FB;
+  /* Primary and secondary brand/palette */
   --ht-primary: #687FE5;
-  --ht-primary-text: #22223B;
-  --ht-secondary-text: #594F6D;
-  --ht-border: #D6C7EE;
-  --ht-error: #F87A77;
+  --ht-primary-light: #A7BFFE;
+  --ht-primary-dark: #3B1877;
+  --ht-secondary: #FFD3E8;
+  --ht-accent-pink: #FBA7C5;
+  --ht-accent-purple: #C48DDC;
+  --ht-accent-green: #47DB7F;
+  --ht-accent-blue: #53A9F5;
 
-  /* Spacing and Shadow Samples — Optional but common for systematized UI */
-  --ht-radius: 0.65rem;
-  --ht-shadow: 0 2px 6px 0 rgba(104,127,229,0.10);
+  --ht-surface: #F7F6FD;
+  --ht-surface-card: #FFFFFFEE;
+  --ht-surface-gradient: linear-gradient(135deg, #FFFFFFEE 70%, #FCE7F3 100%);
+  --ht-surface-dark: #E7E6F3;
+  --ht-bg-gradient: linear-gradient(120deg, #EEE5FA 0%, #FDE7F3 100%);
+
+  --ht-shadow-1: 0 2.5px 14px 0 rgba(167,140,255,0.13);
+  --ht-shadow-2: 0 4px 20px 0 rgba(167,140,255,0.12), 0 1.5px 3px rgba(104,127,229,0.07);
+
+  --ht-primary-text: #3B1877;
+  --ht-secondary-text: #9087AB;
+
+  --ht-radius: 22px;
+  --ht-radius-card: 22px;
+  --ht-radius-avatar: 16px;
+
+  /* Typography */
+  --ht-font: 'Nunito', 'Helvetica Neue', Arial, sans-serif;
+
+  /* Spacing helpers */
+  --ht-card-padding: 28px 23px 24px 23px;
+  --ht-gap-main: 26px;
 }
 
-/* Example utility classes — recommend using these or classNames rather than hardcoding palette values:
-   Use in JS: import 'src/styles/theme.css' and reference vars via style or CSS-in-JS if needed.
-------------------------------------------------------------- */
-
-/* Global background and body defaults */
 body {
-  background: var(--ht-bg-main);
-  color: var(--ht-primary-text);
-  font-family: 'Inter', Arial, Helvetica, sans-serif;
-  margin: 0;
-  padding: 0;
+  background: var(--ht-bg-gradient);
+  font-family: var(--ht-font);
 }
-
-/* Buttons */
-.button-primary {
-  background: var(--ht-primary);
-  color: #fff; /* accessible contrast */
-  border-radius: var(--ht-radius);
-  border: none;
-  box-shadow: var(--ht-shadow);
-  padding: 0.6em 1.3em;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.button-primary:active,
-.button-primary:hover {
-  background: #4354B8;
-}
-.button-secondary {
-  background: var(--ht-bg-secondary);
-  color: var(--ht-primary-text);
-  border: 1px solid var(--ht-border);
-  border-radius: var(--ht-radius);
-  padding: 0.6em 1.3em;
-  font-weight: 500;
-  cursor: pointer;
-}
-.button-secondary:hover {
-  background: var(--ht-surface);
-}
-
-.card {
-  background: var(--ht-bg-secondary);
-  box-shadow: var(--ht-shadow);
-  border-radius: var(--ht-radius);
-  padding: 1.2em;
-  margin-bottom: 1.2em;
-  border: 1px solid var(--ht-border);
-}
-
-/* Headings & Text */
-h1, h2, h3, h4, h5, h6 {
-  color: var(--ht-primary-text);
-  margin-top: 0;
-  font-family: inherit;
-}
-.muted {
-  color: var(--ht-secondary-text);
-}
-.text-error {
-  color: var(--ht-error);
-}
-
-/* Inputs */
-input, textarea, select {
-  border-radius: var(--ht-radius);
-  border: 1px solid var(--ht-border);
-  background: var(--ht-surface);
-  color: var(--ht-primary-text);
-  padding: 0.6em 1em;
-  font-size: 1em;
-  outline: none;
-  transition: border 0.2s;
-}
-input:focus, textarea:focus, select:focus {
-  border-color: var(--ht-primary);
-}
-
-/* Surface for overlays or selected content */
-.surface {
-  background: var(--ht-surface);
-}
-
-/* Accessibility Note: always check with contrast checkers for any new combinations.
-   Use --ht-primary or --ht-primary-text for readable text on light backgrounds.
-*/

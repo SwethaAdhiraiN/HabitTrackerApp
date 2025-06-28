@@ -1,63 +1,78 @@
-@import "./theme.css";
+.dashboard-root {
+  width: 100vw;
+  min-height: 100vh;
+  background: linear-gradient(120deg, #EEE5FA 0%, #FDE7F3 100%);
+  margin: 0;
+  padding: 0;
+  font-family: 'Nunito', 'Helvetica Neue', Arial, sans-serif;
+}
 
-/* PUBLIC_INTERFACE
-   Quote of the Day Widget container pastel styling for Dashboard page.
-*/
-.quoteWidgetContainer {
-  /* Only fallback if inline gradient is missing; let inline style win for pastel overlay */
-  background: var(--ht-surface, #F7F6FD) !important;
-  border-radius: 18px;
-  border: 1.6px solid #E3D3F6;
-  box-shadow: 0 3px 18px 0 rgba(104,127,229,0.13), 0 2px 16px 0 rgba(123,97,255,0.07);
-  padding: 24px 18px 20px 18px;
-  width: 100%;
-  min-width: 250px;
-  max-width: 390px;
+.dashboard-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 26px;
+  align-items: stretch;
+  margin-top: 6px;
+  margin-bottom: 10px;
+}
+
+.dashboard-cards-left,
+.dashboard-cards-right {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  gap: 22px;
+}
+
+.dashboard-card {
+  background: linear-gradient(135deg, #FFFFFFEE 75%, #FCE7F3 100%);
+  border-radius: 22px;
+  box-shadow: 0 4px 20px 0 rgba(167,140,255,0.11), 0 1.5px 3px rgba(104,127,229,0.07);
+  padding: 28px 23px 24px 23px;
+  margin-bottom: 0;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   justify-content: center;
-  min-height: 84px;
-  position: relative;
-  z-index: 24; /* ensure above dashboard cards */
-  box-sizing: border-box;
-  margin-bottom: 0; /* Card outer wrapper handles margin */
-  transition: box-shadow 0.13s, border 0.13s;
-  visibility: visible !important;
-  opacity: 1 !important;
-  pointer-events: auto;
-  overflow: visible !important; /* never clip internals */
-  outline: 0.6px solid #ecd9fa;
+  transition: box-shadow 0.22s, transform 0.14s;
 }
 
-.quoteText {
-  color: var(--ht-primary-text, #26104d);
-  font-size: 1.23rem;
+/* Responsive for different breakpoints */
+@media (max-width: 900px) {
+  .dashboard-content {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+}
+
+@media (max-width: 700px) {
+  .dashboard-content {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    padding: 0 !important;
+  }
+
+  .dashboard-cards-left,
+  .dashboard-cards-right {
+    gap: 16px;
+  }
+}
+
+@media (max-width: 450px) {
+  .dashboard-root {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+}
+
+.dashboard-section-title {
+  font-size: 1.35rem;
   font-weight: 700;
-  text-align: center;
-  line-height: 1.47;
-  letter-spacing: 0.018em;
-  word-break: break-word;
-  max-width: 326px;
-  width: 100%;
-  margin-bottom: 7px;
-  background: transparent;
-  user-select: text;
-  pointer-events: auto;
-  text-shadow: 0 3px 11px rgba(104,127,229,0.11);
+  color: #3B1877;
+  margin-bottom: 12px;
 }
 
-.quoteAuthor {
-  color: var(--ht-primary, #947AE1);
-  font-size: 1.08rem;
-  font-weight: 600;
-  text-align: center;
-  letter-spacing: 0.008em;
-  margin-top: 6px;
-  background: transparent;
-  user-select: text;
-  pointer-events: auto;
-  width: 100%;
-  text-shadow: 0 1px 7px rgba(148,122,225,0.08);
-  overflow: visible !important;
+.dashboard-subtle {
+  color: var(--ht-secondary-text);
 }
