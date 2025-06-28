@@ -62,6 +62,7 @@ function CalendarWithEmotions() {
 
   // For proper popover/menu positioning
   const todayButtonRef = useRef(null);
+  const calendarRef = useRef(null); // anchor emoji popover within calendar
   // Accessibility for emoji popover
   const emojiPopoverRef = useRef(null);
 
@@ -125,27 +126,45 @@ function CalendarWithEmotions() {
    * EmojiPickerPopover - appears absolutely near the today cell, closes
    * only on explicit user action: emoji choice, Remove, ×, or overlay click.
    */
-  function EmojiPickerPopover({ anchorRef, onSelect, onRemove, onClose, open }) {
+  function EmojiPickerPopover({ anchorRef, calendarParentRef, onSelect, onRemove, onClose, open }) {
     // Position calculation
     const [style, setStyle] = useState({});
+
     useEffect(() => {
-      if (!anchorRef.current) return;
-      const rect = anchorRef.current.getBoundingClientRect();
+      if (!anchorRef.current || !calendarParentRef.current) return;
+      const anchorRect = anchorRef.current.getBoundingClientRect();
+      const calendarRect = calendarParentRef.current.getBoundingClientRect();
+
+      // Compute horizontal centering below the anchor (today)
+      const popoverWidth = 260; // default, matches minWidth below
+      // Put popover centered below cell, but clamp left/right to calendar
+      let left =
+        anchorRect.left +
+        anchorRect.width / 2 -
+        popoverWidth / 2 +
+        window.scrollX;
+
+      const minLeft = calendarRect.left + 6 + window.scrollX; // small pad from calendar left
+      const maxLeft = calendarRect.right - popoverWidth - 6 + window.scrollX; // pad from right
+
+      left = Math.max(minLeft, Math.min(left, maxLeft));
+
       setStyle({
         position: "absolute",
-        top: rect.bottom + window.scrollY + 6,
-        left: rect.left + window.scrollX - 25,
+        top: anchorRect.bottom + window.scrollY + 8,
+        left,
         zIndex: 1000,
         background: "#fff",
         border: "1.2px solid #EBD7FF",
         borderRadius: 13,
         boxShadow: "0 2px 17px rgba(102,80,179,.13)",
-        minWidth: 236,
+        minWidth: 260,
+        maxWidth: 360,
+        width: "auto",
         padding: "14px 12px 11px 12px",
         display: "flex",
         flexWrap: "wrap",
         gap: "4px 7px",
-        maxWidth: 350,
       });
       // Accessibility: focus first emoji button when opened
       if (emojiPopoverRef.current) {
@@ -154,7 +173,7 @@ function CalendarWithEmotions() {
           if (btn) btn.focus();
         }, 0);
       }
-    }, [anchorRef, open]);
+    }, [anchorRef, open, calendarParentRef]);
 
     // Allow closing modal ONLY on explicit user action - emoji, Remove, ×, or overlay
     // Overlay click closes only if direct (not bubbling from modal).
@@ -258,6 +277,7 @@ function CalendarWithEmotions() {
   // Calendar UI
   return (
     <section
+      ref={calendarRef}
       style={{
         width: "100%",
         maxWidth: 440,
@@ -462,6 +482,7 @@ function CalendarWithEmotions() {
       {emojiPickerOpen && (
         <EmojiPickerPopover
           anchorRef={todayButtonRef}
+          calendarParentRef={calendarRef}
           onSelect={handleSelectEmoji}
           onRemove={handleRemoveEmoji}
           onClose={() => setEmojiPickerOpen(false)}
