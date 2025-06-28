@@ -1,77 +1,94 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 /**
  * PUBLIC_INTERFACE
  * CalendarWithEmotions
- * Displays a monthly calendar with emotion markers for each date.
- * - Shows current selected month/year in header with previous/next navigation buttons.
- * - Only days of the selected month are rendered (no overflow days).
- * - Buttons and layout are styled to match dashboard theme and be responsive.
- * - On small screens, calendar layout adapts for clarity.
- * 
- * @param {Object} props
- * @param {Object} [props.emotionData] - Optional object of emotion per 'YYYY-MM-DD'. E.g. {"2024-06-28": "happy"}
- * @param {Function} [props.onDateClick] - Optional callback(date: Date, iso: string)
+ * Displays a monthly calendar with emoji emotion markers per date.
+ * Today only: click today's cell to assign/remove any emoji via menu (emojis are stored in localStorage).
+ * The visual appearance of the calendar remains identical except for today's emoji badge.
  */
-const monthNames = [
+const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
 ];
 
-// Soft pastel color mapping for different emotions
-const EMOTION_COLOR_MAP = {
-  happy: "#47DB7F",
-  sad: "#9DB9F7",
-  neutral: "#FFD67E",
-  angry: "#F77C7C",
-  stressed: "#ECC7FF",
-  excited: "#53A9F5",
-  default: "#D9E7F6",
-};
+// Set of available smiley emoji for today-only selector (expandable)
+const EMOJI_OPTIONS = [
+  "😀","😁","😊","😇","🙂","😉","😌","😍","🤩","🥳",
+  "😜","😎","😐","😕","🙁","😞","😢","😭","😡","🤔",
+  "😏","😴","😅","😂","😭","😱"
+];
 
+// Util: zero pad
 function pad(num) {
   return num < 10 ? "0" + num : "" + num;
 }
 
+// Util: get ISO yyyy-mm-dd for a Date
+function dateISO(date) {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+// Util: get month matrix (array of weeks, each week = array of dates/null)
 function getMonthMatrix(year, monthIdx) {
-  // Returns a flat array of date objects for this month's days, from 1st to last day only
-  const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
-  const result = [];
-  for (let d = 1; d <= daysInMonth; ++d) {
-    result.push(new Date(year, monthIdx, d));
+  const firstDay = new Date(year, monthIdx, 1);
+  const lastDay = new Date(year, monthIdx + 1, 0);
+  const matrix = [];
+  let week = Array(firstDay.getDay()).fill(null);
+
+  for (let d = 1; d <= lastDay.getDate(); d++) {
+    week.push(new Date(year, monthIdx, d));
+    if (week.length === 7) {
+      matrix.push(week);
+      week = [];
+    }
   }
-  return result;
+  if (week.length > 0) {
+    while (week.length < 7) week.push(null);
+    matrix.push(week);
+  }
+  return matrix;
 }
 
-function getTodayISO() {
+function todayISO() {
   const now = new Date();
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  return dateISO(now);
 }
 
-function CalendarWithEmotions({ emotionData = {}, onDateClick }) {
-  // date context: always at start of selected month
+function CalendarWithEmotions() {
+  // emotionData: { 'YYYY-MM-DD': emoji }
+  const [emotionData, setEmotionData] = useState({});
   const [selected, setSelected] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
 
+  // For proper popover
+  const todayButtonRef = useRef(null);
+
+  useEffect(() => {
+    // On mount: load emotionData from storage
+    try {
+      const raw = localStorage.getItem("emotion-tracker");
+      if (raw) setEmotionData(JSON.parse(raw));
+    } catch {}
+  }, []);
+
+  // Save emotionData on change
+  useEffect(() => {
+    try {
+      localStorage.setItem("emotion-tracker", JSON.stringify(emotionData));
+    } catch {}
+  }, [emotionData]);
+
+  // Calendar matrix for current month
   const year = selected.getFullYear();
-  const month = selected.getMonth();
-  const todayISO = getTodayISO();
+  const monthIdx = selected.getMonth();
+  const todayISOstr = todayISO();
+  const monthMatrix = getMonthMatrix(year, monthIdx);
 
-  // Generate all dates in this month
-  const days = getMonthMatrix(year, month);
-
-  // Weekday names for grid header (start from Sunday)
-  const weekdayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-  // The weekday index of the first day of the month (0=Sun)
-  const firstDayIdx = new Date(year, month, 1).getDay();
-
-  // For grid alignment, number of blank cells before 1st:
-  const blanksAtStart = Array(firstDayIdx).fill(null);
-
-  // Handler for previous and next month navigation
+  // Navigation
   function goToPrevMonth() {
     setSelected(prev => {
       const m = prev.getMonth() === 0 ? 11 : prev.getMonth() - 1;
@@ -88,6 +105,130 @@ function CalendarWithEmotions({ emotionData = {}, onDateClick }) {
     });
   }
 
+  // Set emoji for today
+  function handleSelectEmoji(emoji) {
+    setEmotionData(prev => ({
+      ...prev,
+      [todayISOstr]: emoji
+    }));
+    setEmojiPickerOpen(false);
+  }
+  // Remove today's emoji
+  function handleRemoveEmoji() {
+    setEmotionData(prev => {
+      const next = { ...prev };
+      delete next[todayISOstr];
+      return next;
+    });
+    setEmojiPickerOpen(false);
+  }
+
+  // Click outside closes
+  useEffect(() => {
+    if (!emojiPickerOpen) return;
+    function listener(e) {
+      if (
+        todayButtonRef.current &&
+        !todayButtonRef.current.contains(e.target)
+      ) {
+        setEmojiPickerOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", listener, true);
+    return () => document.removeEventListener("mousedown", listener, true);
+  }, [emojiPickerOpen]);
+
+  // Get emoji for calendar date
+  function emojiForDate(dateObj) {
+    if (!dateObj) return "";
+    return emotionData[dateISO(dateObj)] || "";
+  }
+
+  // Render emoji picker popover (absolute, layered over, without disturbing layout)
+  function EmojiPickerPopover({ anchorRef, onSelect, onRemove, onClose }) {
+    // Render the popover near today's cell
+    const [style, setStyle] = useState({});
+    useEffect(() => {
+      if (!anchorRef.current) return;
+      const rect = anchorRef.current.getBoundingClientRect();
+      setStyle({
+        position: "absolute",
+        top: rect.bottom + window.scrollY + 6,
+        left: rect.left + window.scrollX - 25,
+        zIndex: 1000,
+        background: "#fff",
+        border: "1.2px solid #EBD7FF",
+        borderRadius: 13,
+        boxShadow: "0 2px 17px rgba(102,80,179,.13)",
+        minWidth: 236,
+        padding: "14px 12px 11px 12px",
+        display: "flex",
+        flexWrap: "wrap",
+        gap: "4px 7px",
+        maxWidth: 350,
+      });
+    }, [anchorRef]);
+    return (
+      <div style={style}>
+        {EMOJI_OPTIONS.map((emoji, i) => (
+          <button
+            key={emoji}
+            style={{
+              fontSize: "1.54em",
+              width: 37,
+              height: 35,
+              margin: "0 2.3px 6px 2.3px",
+              background: "#F6F4FB",
+              border: "none",
+              borderRadius: 8,
+              cursor: "pointer",
+              outline: "none",
+              fontWeight: emotionData[todayISOstr] === emoji ? 800 : 500,
+              boxShadow: emotionData[todayISOstr] === emoji ? "0 0 0 3.5px #AC69F055" : "none"
+            }}
+            onClick={() => onSelect(emoji)}
+            tabIndex={0}
+            aria-label={"Set emotion " + emoji}
+          >
+            {emoji}
+          </button>
+        ))}
+        <button
+          style={{
+            marginLeft: 9,
+            background: "#FFE4ED",
+            border: "none",
+            borderRadius: 12,
+            color: "#BD3973",
+            fontWeight: 700,
+            fontSize: "1.04em",
+            padding: "5px 15px",
+            cursor: "pointer",
+            minWidth: 48
+          }}
+          onClick={onRemove}
+          tabIndex={0}
+        >Remove</button>
+        <button
+          style={{
+            marginLeft: 9,
+            background: "#EEE",
+            border: "none",
+            borderRadius: 9,
+            color: "#998fae",
+            fontWeight: 600,
+            fontSize: "0.94em",
+            padding: "4.5px 10px",
+            cursor: "pointer"
+          }}
+          onClick={onClose}
+          tabIndex={0}
+        >✕</button>
+      </div>
+    )
+  }
+
+  // Calendar render
   return (
     <section
       style={{
@@ -100,6 +241,7 @@ function CalendarWithEmotions({ emotionData = {}, onDateClick }) {
         margin: "0 auto",
         boxSizing: "border-box",
         fontFamily: '"Helvetica Neue", Arial, sans-serif',
+        position: "relative"
       }}
     >
       {/* Calendar month/year header with navigation */}
@@ -151,7 +293,7 @@ function CalendarWithEmotions({ emotionData = {}, onDateClick }) {
             userSelect: "none",
           }}
         >
-          {monthNames[month]} {year}
+          {MONTH_NAMES[monthIdx]} {year}
         </div>
         <button
           type="button"
@@ -180,7 +322,7 @@ function CalendarWithEmotions({ emotionData = {}, onDateClick }) {
           </svg>
         </button>
       </header>
-      {/* Calendar weekday labels */}
+      {/* Calendar weekday header */}
       <div
         style={{
           display: "grid",
@@ -189,7 +331,7 @@ function CalendarWithEmotions({ emotionData = {}, onDateClick }) {
           marginBottom: 4,
         }}
       >
-        {weekdayNames.map((wd, i) => (
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(wd => (
           <div
             key={wd}
             style={{
@@ -217,93 +359,100 @@ function CalendarWithEmotions({ emotionData = {}, onDateClick }) {
           alignItems: "stretch",
         }}
       >
-        {/* Blank cells for alignment (start at correct weekday) */}
-        {blanksAtStart.map((_, idx) => (
-          <div key={"blank" + idx} />
-        ))}
-        {/* Only current month's days */}
-        {days.map(dateObj => {
-          const d = dateObj.getDate();
-          const dateISO = `${year}-${pad(month + 1)}-${pad(d)}`;
-          const isToday = dateISO === todayISO;
-          const hasEmotion = emotionData && emotionData[dateISO];
-          const emotion = hasEmotion ? emotionData[dateISO] : null;
-          const dotColor = emotion ? (EMOTION_COLOR_MAP[emotion] || EMOTION_COLOR_MAP.default) : null;
-          return (
-            <button
-              key={dateISO}
-              aria-label={`Day ${d}` + (emotion ? `, feeling ${emotion}` : "")}
-              onClick={() => onDateClick && onDateClick(dateObj, dateISO)}
-              style={{
-                // Responsive sizing, min cell size
-                aspectRatio: "1",
-                width: "100%",
-                minWidth: 0,
-                minHeight: 32,
-                maxWidth: 44,
-                background: isToday
-                  ? "linear-gradient(90deg,#F9EBFF 65%,#DCFAF5 100%)"
-                  : "rgba(249,249,252,0.94)",
-                border: "none",
-                outline: isToday ? "2.3px solid #6951C7" : "none",
-                borderRadius: 13,
-                margin: 0,
-                padding: "0.27rem 0 0.23rem 0",
-                fontSize: 15.2,
-                fontWeight: 500,
-                color: "#483795",
-                cursor: onDateClick ? "pointer" : "default",
-                position: "relative",
-                boxShadow: isToday ? "0 2px 9px rgba(140,119,217,.12)" : "none",
-                transition: "background .13s, outline .13s",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
-                alignItems: "center",
-              }}
-              tabIndex={0}
-            >
-              <span>{d}</span>
-              {/* Emotion dot, if present */}
-              {emotion ? (
-                <span
-                  style={{
-                    width: 8,
-                    height: 8,
-                    background: dotColor,
-                    borderRadius: "50%",
-                    display: "inline-block",
-                    marginTop: 2,
-                    border: "1.3px solid #fff",
-                    boxShadow: "0 0 2px #bcbbdc",
-                  }}
-                />
-              ) : null}
-            </button>
-          );
-        })}
+        {monthMatrix.map((week, wi) =>
+          week.map((dateObj, di) => {
+            if (!dateObj) return <div key={`blank-${wi}-${di}`} />;
+            const d = dateObj.getDate();
+            const dISO = dateISO(dateObj);
+            const isToday = dISO === todayISOstr;
+            const emoji = emojiForDate(dateObj);
+
+            return (
+              <button
+                key={dISO}
+                // Only today gets a ref and click handler
+                ref={isToday ? todayButtonRef : null}
+                aria-label={`Day ${d}` + (emoji ? `, feeling ${emoji}` : "")}
+                onClick={
+                  isToday
+                    ? (e) => {
+                        e.preventDefault();
+                        setEmojiPickerOpen(open => !open);
+                      }
+                    : undefined
+                }
+                style={{
+                  aspectRatio: "1",
+                  width: "100%",
+                  minWidth: 0,
+                  minHeight: 32,
+                  maxWidth: 44,
+                  background: isToday
+                    ? "linear-gradient(90deg,#F9EBFF 65%,#DCFAF5 100%)"
+                    : "rgba(249,249,252,0.94)",
+                  border: "none",
+                  outline: isToday ? "2.3px solid #6951C7" : "none",
+                  borderRadius: 13,
+                  margin: 0,
+                  padding: "0.27rem 0 0.23rem 0",
+                  fontSize: 15.2,
+                  fontWeight: 500,
+                  color: "#483795",
+                  cursor: isToday ? "pointer" : "default",
+                  position: "relative",
+                  boxShadow: isToday ? "0 2px 9px rgba(140,119,217,.12)" : "none",
+                  transition: "background .13s, outline .13s",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+                tabIndex={0}
+                type="button"
+              >
+                <span>{d}</span>
+                {/* Emoji badge if present */}
+                {emoji && (
+                  <span
+                    style={{
+                      display: "inline-block",
+                      fontSize: "1.38em",
+                      marginTop: 1,
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    {emoji}
+                  </span>
+                )}
+              </button>
+            );
+          })
+        )}
       </div>
-      {/* Optional: small legend if emotions shown */}
-      {emotionData && Object.values(emotionData).filter(Boolean).length > 0 && (
-        <div style={{
-          marginTop: 1,
-          display: "flex",
-          gap: 8,
-          flexWrap: "wrap",
-          fontSize: 12.5,
-          justifyContent: "center"
-        }}>
-          {Object.entries(EMOTION_COLOR_MAP).filter(([k]) => k !== "default").map(([emo, color]) => (
-            <span key={emo} style={{display: "flex", alignItems: "center", gap: 3, marginRight: 7}}>
-              <span style={{
-                width: 10, height: 10, borderRadius: "50%", background: color,
-                display: "inline-block", border: "1px solid #E5E5EC", marginRight: 2
-              }}/>
-              <span style={{color:"#A39EB9"}}>{emo.charAt(0).toUpperCase() + emo.slice(1)}</span>
-            </span>
-          ))}
-        </div>
+
+      {/* Popover for emoji picker, overlays above, not disrupting layout */}
+      {emojiPickerOpen && (
+        <EmojiPickerPopover
+          anchorRef={todayButtonRef}
+          onSelect={handleSelectEmoji}
+          onRemove={handleRemoveEmoji}
+          onClose={() => setEmojiPickerOpen(false)}
+        />
       )}
+
+      {/* Today summary (for accessibility/feedback): */}
+      <div
+        style={{
+          marginTop: 8,
+          textAlign: "center",
+          minHeight: "2.2em"
+        }}
+        aria-live="polite"
+      >
+        {emotionData[todayISOstr] && (
+          <span style={{fontSize:"2em"}}>{emotionData[todayISOstr]}</span>
+        )}
+      </div>
     </section>
   );
 }
