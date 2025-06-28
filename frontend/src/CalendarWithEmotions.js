@@ -27,22 +27,31 @@ const EMOTION_PALETTE = [
  * Each entry is { date, isCurrentMonth, isToday }.
  */
 function getMonthWeeks(year, month) {
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
+  // Defensive: ensure year/month are numbers and valid
+  const today = new Date();
+  let safeYear = Number.isFinite(year) && year > 1970 ? year : today.getFullYear();
+  let safeMonth = Number.isFinite(month) && month >= 0 && month <= 11 ? month : today.getMonth();
+
+  const firstDay = new Date(safeYear, safeMonth, 1);
   const startDay = firstDay.getDay(); // 0 (Sun) - 6 (Sat)
   const weeks = [];
-  let current = new Date(year, month, 1 - startDay);
+  // Defensive: if startDay is NaN, fallback to Sunday (should never be NaN now)
+  let dayOffset = Number.isFinite(startDay) ? startDay : 0;
+  let current = new Date(safeYear, safeMonth, 1 - dayOffset);
+
   for (let week = 0; week < 6; week++) {
     let weekArr = [];
     for (let day = 0; day < 7; day++) {
       let d = new Date(current);
+      // Defensive: avoid bad date case
       weekArr.push({
-        date: d,
-        isCurrentMonth: d.getMonth() === month,
+        date: isNaN(d.getTime()) ? null : d,
+        isCurrentMonth: isNaN(d.getTime()) ? false : d.getMonth() === safeMonth,
         isToday:
-          d.getFullYear() === new Date().getFullYear() &&
-          d.getMonth() === new Date().getMonth() &&
-          d.getDate() === new Date().getDate(),
+          !isNaN(d.getTime()) &&
+          d.getFullYear() === today.getFullYear() &&
+          d.getMonth() === today.getMonth() &&
+          d.getDate() === today.getDate(),
       });
       current.setDate(current.getDate() + 1);
     }
@@ -69,12 +78,17 @@ function CalendarWithEmotions({
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
 
-  // Compute today's "YYYY-MM-DD" string
+  // Defensive: sanitize props
   const todayObj = new Date();
+  const safeYear = Number.isFinite(year) && year > 1970 ? year : todayObj.getFullYear();
+  const safeMonth = Number.isFinite(month) && month >= 0 && month <= 11 ? month : todayObj.getMonth();
+
+  // Compute today's "YYYY-MM-DD" string
   const todayStr = `${todayObj.getFullYear()}-${String(
     todayObj.getMonth() + 1
   ).padStart(2, "0")}-${String(todayObj.getDate()).padStart(2, "0")}`;
-  const weeks = getMonthWeeks(year, month);
+
+  const weeks = getMonthWeeks(safeYear, safeMonth);
 
   // Show picker only for today's cell if clicked
   function handleCellClick(day) {
@@ -176,7 +190,7 @@ function CalendarWithEmotions({
               onClick={() => handleCellClick(day)}
             >
               <span style={{ fontSize: 11, opacity: 0.7, marginBottom: 2 }}>
-                {day.date.getDate()}
+                {day.date && !isNaN(day.date.getTime()) ? day.date.getDate() : ""}
               </span>
               <span style={{ fontSize: 23, margin: "0 0 3px 0" }}>
                 {emotion}
