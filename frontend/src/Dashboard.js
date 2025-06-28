@@ -316,89 +316,135 @@ function EnhancedHabitsToday(props) {
 }
 
 function Dashboard() {
+  // Load authenticated user from session/localStorage. If not present, show loading/blank.
   const [user, setUser] = useState(null);
-  const [habits, setHabits] = useState([
-    {
-      name: "Hydration",
-      category: "hydration",
-      streak: 6,
-      streakHistory: [1, 2, 3, 3, 4, 5, 6, 3, 3, 4, 5, 6, 6, 6],
-      progress: [true, true, false],
-    },
-    {
-      name: "Read Book",
-      category: "reading",
-      streak: 4,
-      streakHistory: [0, 1, 1, 2, 3, 2, 3, 2, 2, 1, 2, 4, 4, 4],
-      progress: [true, false, true],
-    },
-    {
-      name: "Mindfulness",
-      category: "mindfulness",
-      streak: 8,
-      streakHistory: [1, 2, 2, 3, 5, 7, 7, 8, 8, 7, 8, 8, 8, 8],
-      progress: [true, true, true],
-    },
-  ]);
-  const [completionTrend, setCompletionTrend] = useState([
-    { date: "2024-06-23", completeCount: 2, total: 3 },
-    { date: "2024-06-24", completeCount: 3, total: 3 },
-    { date: "2024-06-25", completeCount: 2, total: 3 },
-    { date: "2024-06-26", completeCount: 1, total: 3 },
-    { date: "2024-06-27", completeCount: 3, total: 3 },
-    { date: "2024-06-28", completeCount: 3, total: 3 },
-    { date: "2024-06-29", completeCount: 2, total: 3 },
-  ]);
+  const [habits, setHabits] = useState(null);
+  const [completionTrend, setCompletionTrend] = useState(null);
+
+  // Example: Optionally, track loading state for habits, trend, etc.
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    setUser({
-      name: "Jane Doe",
-      avatar: "https://randomuser.me/api/portraits/women/52.jpg",
-    });
-    // Here: if fetching API, setHabits(fetchedHabits); setCompletionTrend(fetchedTrend)
+    // Try to load authenticated user from sessionStorage/localStorage
+    let storedUser = null;
+    try {
+      storedUser =
+        JSON.parse(window.sessionStorage.getItem("habit_user")) ||
+        JSON.parse(window.localStorage.getItem("habit_user"));
+    } catch { /* ignore */ }
+
+    if (storedUser && storedUser.id) {
+      setUser(storedUser);
+      setLoading(true);
+
+      // Fetch user habits and habit completion trend (replace with actual API)
+      fetch(`/api/habits?user_id=${storedUser.id}`)
+        .then((resp) => (resp.ok ? resp.json() : Promise.reject(resp)))
+        .then((data) => {
+          setHabits(
+            Array.isArray(data.habits)
+              ? data.habits.map((h) => ({
+                  // Adapt habit fields if needed for display
+                  name: h.name,
+                  category: h.icon || h.category || "",
+                  streak: h.streak,
+                  streakHistory: h.streakHistory || [], // If your backend supports streak history
+                  progress: h.days || [],
+                  ...h
+                }))
+              : []
+          );
+        })
+        .catch(() => setHabits([]));
+
+      // For completion trend: requires separate API, you can set null or basic structure for now.
+      // Your app may need to fetch from /api/progress?user_id=... (implement as you expand)
+      // Here we set a blank array to avoid static data.
+      setCompletionTrend([]);
+      setLoading(false);
+    } else {
+      setUser(null);
+      setHabits(null);
+      setCompletionTrend(null);
+      setLoading(false);
+    }
   }, []);
 
+  // Logout handler: clears storage and refreshes to login/landing
+  const handleLogout = () => {
+    window.sessionStorage.removeItem("habit_user");
+    window.localStorage.removeItem("habit_user");
+    setUser(null);
+    // Optionally, redirect to login/home
+    window.location.href = "/login";
+  };
+
+  // UI: only show sections if real/fetched user and data loaded
   return (
     <div className="dashboard-root">
       <DecorativeBanner variant="top" />
-      <UserHeader user={user} />
+      <UserHeader user={user} onLogout={handleLogout} />
       <main className="dashboard-main">
         <div className="dashboard-main-content">
-          <EnhancedHabitsToday user={user} habits={habits} />
-          <div
-            style={{
-              marginBottom: 10,
-              marginTop: -8,
-              display: "flex",
-              flexDirection: "column",
-              gap: 0,
-              width: "100%",
-            }}
-          >
-            {habits.map((habit, idx) => (
-              <StreakBoard key={habit.name || idx} habit={habit} />
-            ))}
-          </div>
-          <div style={{ margin: "0 0 18px 0" }}>
-            <svg
-              width="180"
-              height="16"
-              viewBox="0 0 180 16"
-              style={{
-                width: "80%",
-                maxWidth: 220,
-                minHeight: 10,
-                display: "block",
-                margin: "8px auto",
-              }}
-            >
-              <ellipse cx="70" cy="10" rx="56" ry="5" fill="#F7A1B2" opacity="0.21" />
-              <ellipse cx="120" cy="8" rx="20" ry="3" fill="#C48DDC" opacity="0.17" />
-            </svg>
-          </div>
-          <TrendChartWidget data={completionTrend} />
-          <ProgressSnapshotWidget user={user} />
-          <MiniCalendarWidget user={user} />
-          <QuoteOfTheDayWidget />
+          {!user && (
+            <div style={{ color: "#aaa", fontSize: "1.1em", marginTop: 40, textAlign: "center" }}>
+              {loading ? "Loading user data..." : "No user session found."}
+            </div>
+          )}
+
+          {user && (
+            <>
+              {/* Habits Today: blank or loading if habits not loaded */}
+              {habits === null ? (
+                <div style={{ color: "#aaa", margin: "18px 0" }}>Loading your habits…</div>
+              ) : habits.length === 0 ? (
+                <div style={{ color: "#aaa", margin: "18px 0" }}>No habits found—start a new one!</div>
+              ) : (
+                <EnhancedHabitsToday user={user} habits={habits} />
+              )}
+
+              {/* Streak Boards */}
+              <div
+                style={{
+                  marginBottom: 10,
+                  marginTop: -8,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 0,
+                  width: "100%",
+                }}
+              >
+                {habits && habits.length > 0
+                  ? habits.map((habit, idx) => (
+                      <StreakBoard key={habit.name || habit.id || idx} habit={habit} />
+                    ))
+                  : null}
+              </div>
+              <div style={{ margin: "0 0 18px 0" }}>
+                <svg
+                  width="180"
+                  height="16"
+                  viewBox="0 0 180 16"
+                  style={{
+                    width: "80%",
+                    maxWidth: 220,
+                    minHeight: 10,
+                    display: "block",
+                    margin: "8px auto",
+                  }}
+                >
+                  <ellipse cx="70" cy="10" rx="56" ry="5" fill="#F7A1B2" opacity="0.21" />
+                  <ellipse cx="120" cy="8" rx="20" ry="3" fill="#C48DDC" opacity="0.17" />
+                </svg>
+              </div>
+              {/* Completion Trend Chart: if not available yet, show empty or loading */}
+              <TrendChartWidget data={completionTrend || []} />
+              {/* Progress Snapshot, MiniCalendar, and Quote widgets—pass dynamic user, blank/placeholder for now */}
+              <ProgressSnapshotWidget user={user} />
+              <MiniCalendarWidget user={user} />
+              <QuoteOfTheDayWidget />
+            </>
+          )}
         </div>
       </main>
     </div>
