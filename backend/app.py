@@ -301,7 +301,8 @@ def create_app():
         # Pseudo-random (stable) selection for the day:
         day_idx = (datetime.date.today().day + datetime.date.today().month) % len(quotes)
         q = quotes[day_idx]
-        return jsonify({"success": True, "quote": q})
+        # Provide response as {quote: ..., author: ...}, not nested
+        return jsonify({"success": True, "quote": q.get("text", ""), "author": q.get("author", "Unknown")})
 
     # ---- EMOTION (PER-DAY, PER-USER, EMOJI) TRACKING ----
     # PUBLIC_INTERFACE
